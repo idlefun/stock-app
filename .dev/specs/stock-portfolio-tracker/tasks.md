@@ -43,6 +43,10 @@
 - [x] **5.6**: Show cumulative split ratio badge on dashboard (relative to user's earliest transaction date)
 - [x] **5.7**: Support editing transactions inline (all fields including exchange rate)
 - [x] **5.8**: Support historical/delisted tickers with manual entry and optional company name
+- [x] **5.9**: Restrict sell form to held stocks dropdown with quantity cap
+- [x] **5.10**: Add dividend transaction type (amount, currency, EUR/USD rate) with held stocks dropdown
+- [x] **5.11**: Add tax paid (EUR) field for dividends, calculate net dividends in portfolio
+- [x] **5.12**: Show dividends (net of tax) in dashboard holdings table and portfolio summary
 
 ## Documentation Tasks
 

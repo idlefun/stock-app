@@ -81,8 +81,9 @@ Returns all transactions sorted by date (newest first). Supports optional `?tick
 Returns detail for a single stock: all transactions, realized gain/loss per sell, and current holding summary.
 
 ### `POST /api/transactions`
-Create a new buy or sell transaction.
-Body: `{ type, ticker, quantity, pricePerShare, priceCurrency, commission, commissionCurrency, date, companyName, exchangeRate }`
+Create a new buy, sell, or dividend transaction.
+- Buy/sell body: `{ type, ticker, quantity, pricePerShare, priceCurrency, commission, commissionCurrency, date, companyName, exchangeRate }`
+- Dividend body: `{ type: "dividend", ticker, date, amount, amountCurrency, taxPaid, exchangeRate }`
 If `exchangeRate` is provided, it is used directly; otherwise the system auto-fetches the historical EUR/USD rate for the transaction date.
 
 ### `PUT /api/transactions/:id`
@@ -106,6 +107,7 @@ Returns current EUR/USD exchange rate (what 1 EUR is worth in USD).
 ## Data Model
 
 ### Transaction (stored in `data/transactions.json`)
+Buy/sell transaction:
 ```json
 {
   "id": "uuid",
@@ -122,6 +124,21 @@ Returns current EUR/USD exchange rate (what 1 EUR is worth in USD).
   "createdAt": "2024-01-15T10:30:00Z"
 }
 ```
+Dividend transaction:
+```json
+{
+  "id": "uuid",
+  "type": "dividend",
+  "ticker": "AAPL",
+  "date": "2024-03-15",
+  "amount": 24.50,
+  "amountCurrency": "USD",
+  "taxPaid": 3.68,
+  "exchangeRate": 1.087,
+  "createdAt": "2024-03-15T10:30:00Z"
+}
+```
+`taxPaid` is always in EUR. Net dividend = gross amount (converted to EUR) minus taxPaid.
 
 ### Price Cache (stored in `data/prices.json`)
 ```json

@@ -8,7 +8,7 @@ A browser-based stock portfolio tracker for a single user. The application allow
 
 ### Requirement 1: Transaction Management
 
-**User Story:** As a user, I want to enter stock purchases and sales, so that I can keep an accurate record of my portfolio activity.
+**User Story:** As a user, I want to enter stock purchases, sales, and dividends, so that I can keep an accurate record of my portfolio activity.
 
 #### Acceptance Criteria
 
@@ -25,6 +25,10 @@ A browser-based stock portfolio tracker for a single user. The application allow
 11. WHEN the user checks the "Historical / delisted" checkbox THE SYSTEM SHALL allow manual ticker entry without Yahoo Finance validation and optionally accept a company name
 12. WHEN a transaction involves USD currency THE SYSTEM SHALL store the EUR/USD exchange rate, either user-provided or auto-fetched for that date from the Frankfurter API
 13. WHEN the user views the transaction list THE SYSTEM SHALL display a Total Cost column in EUR (price × quantity + commission, converted using the transaction's exchange rate)
+14. WHEN the user selects "sell" or "dividend" type THE SYSTEM SHALL display a dropdown of currently held stocks instead of the ticker search
+15. WHEN the user selects "sell" type THE SYSTEM SHALL limit the quantity to the number of shares currently held
+16. WHEN the user submits a dividend transaction THE SYSTEM SHALL store the ticker, date, gross amount, amount currency, tax paid (in EUR), and optional EUR/USD exchange rate
+17. WHEN a dividend has tax paid THE SYSTEM SHALL calculate net dividends as gross amount minus tax paid
 
 ### Requirement 2: Live Price Data
 
@@ -57,14 +61,15 @@ A browser-based stock portfolio tracker for a single user. The application allow
 
 #### Acceptance Criteria
 
-1. WHEN the user views the portfolio THE SYSTEM SHALL display overall portfolio total invested, holdings value, unrealized gains, realized gains, and total gain/loss in EUR (primary) and USD (secondary)
-2. WHEN the user views the portfolio THE SYSTEM SHALL display for each stock: ticker, company name, quantity held, invested, holdings value, unrealized, realized, total gain, and allocation percentage
+1. WHEN the user views the portfolio THE SYSTEM SHALL display overall portfolio total invested, holdings value, unrealized gains, realized gains, dividends (net of tax), and total gain/loss in EUR (primary) and USD (secondary)
+2. WHEN the user views the portfolio THE SYSTEM SHALL display for each stock: ticker, company name, quantity held, invested, holdings value, unrealized, realized, dividends (net with tax breakdown), total gain, and allocation percentage
 3. WHEN the user clicks on a column header in the holdings table THE SYSTEM SHALL sort the table by that column, toggling between ascending and descending order
 4. WHEN the user clicks on a stock in the portfolio view THE SYSTEM SHALL display a detail view showing all buy and sell transactions for that stock, with date, type, quantity, price, commission, and realized gain/loss for each sell transaction in both USD and EUR
 5. WHEN the user views the portfolio THE SYSTEM SHALL display a performance-over-time line chart showing portfolio value history
 6. WHEN the user views the portfolio THE SYSTEM SHALL display a portfolio allocation pie chart showing the percentage weight of each stock
 7. WHEN gain/loss is calculated THE SYSTEM SHALL use the average cost basis method
 8. WHEN gain/loss is calculated THE SYSTEM SHALL include commission costs in the cost basis (added to buy cost, subtracted from sell proceeds)
+9. WHEN total gain/loss is calculated THE SYSTEM SHALL include net dividends (gross minus tax) in addition to realized and unrealized gains
 
 ### Requirement 5: Stock Split Adjustments
 
