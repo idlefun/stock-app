@@ -64,7 +64,6 @@ function EditRow({ transaction, onSave, onCancel }) {
             <option value="EUR">EUR</option>
           </select>
         </td>
-        <td>—</td>
         <td>
           <input type="number" value={form.commission} onChange={e => set('commission', e.target.value)} min="0" step="0.01" size="6" />
           <select value={form.commissionCurrency} onChange={e => set('commissionCurrency', e.target.value)}>
@@ -72,6 +71,7 @@ function EditRow({ transaction, onSave, onCancel }) {
             <option value="EUR">EUR</option>
           </select>
         </td>
+        <td>—</td>
         <td>
           {showRate ? (
             <input type="number" value={form.exchangeRate} onChange={e => set('exchangeRate', e.target.value)} min="0" step="0.0000001" size="10" placeholder="EUR/USD" />
@@ -120,8 +120,8 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
           <th>Ticker</th>
           <th>Qty</th>
           <th>Price</th>
-          <th>Total Cost</th>
           <th>Commission</th>
+          <th>Total Cost</th>
           <th>EUR/USD Rate</th>
           <th></th>
         </tr>
@@ -145,6 +145,11 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
                 {t.priceCurrency === 'USD' ? formatUSD(t.pricePerShare) : formatEUR(t.pricePerShare)}
               </td>
               <td>
+                {t.commission > 0
+                  ? (t.commissionCurrency === 'USD' ? formatUSD(t.commission) : formatEUR(t.commission))
+                  : '—'}
+              </td>
+              <td>
                 {(() => {
                   const rate = t.exchangeRate || 1;
                   let costEUR = t.priceCurrency === 'EUR'
@@ -155,11 +160,6 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
                     : 0;
                   return formatEUR(costEUR + commEUR);
                 })()}
-              </td>
-              <td>
-                {t.commission > 0
-                  ? (t.commissionCurrency === 'USD' ? formatUSD(t.commission) : formatEUR(t.commission))
-                  : '—'}
               </td>
               <td className="exchange-rate-cell">
                 {hasUSD(t) && t.exchangeRate ? parseFloat(t.exchangeRate.toFixed(7)) : '—'}
