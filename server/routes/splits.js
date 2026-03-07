@@ -45,7 +45,8 @@ async function getSplits(ticker) {
         ratio: s.numerator / s.denominator,
         description: `${s.numerator}:${s.denominator} Split`,
       }))
-      .filter(s => s.ratio <= 0.9 || s.ratio >= 1.1);
+      .filter(s => Number.isInteger(s.numerator) && Number.isInteger(s.denominator)
+        && (s.denominator === 1 || s.numerator === 1));
 
     splitsCache[ticker] = {
       splits,
