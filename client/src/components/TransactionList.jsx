@@ -162,7 +162,7 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
                   : '—'}
               </td>
               <td className="exchange-rate-cell">
-                {hasUSD(t) && t.exchangeRate ? t.exchangeRate.toFixed(7) : '—'}
+                {hasUSD(t) && t.exchangeRate ? parseFloat(t.exchangeRate.toFixed(7)) : '—'}
               </td>
               <td className="row-actions">
                 <button className="btn-edit" onClick={() => setEditingId(t.id)} title="Edit">✎</button>
