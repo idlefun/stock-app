@@ -64,6 +64,7 @@ function EditRow({ transaction, onSave, onCancel }) {
             <option value="EUR">EUR</option>
           </select>
         </td>
+        <td>—</td>
         <td>
           <input type="number" value={form.commission} onChange={e => set('commission', e.target.value)} min="0" step="0.01" size="6" />
           <select value={form.commissionCurrency} onChange={e => set('commissionCurrency', e.target.value)}>
@@ -82,7 +83,7 @@ function EditRow({ transaction, onSave, onCancel }) {
         </td>
       </tr>
       {error && (
-        <tr><td colSpan="8" className="edit-error">{error}</td></tr>
+        <tr><td colSpan="9" className="edit-error">{error}</td></tr>
       )}
     </>
   );
@@ -119,6 +120,7 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
           <th>Ticker</th>
           <th>Qty</th>
           <th>Price</th>
+          <th>Total Cost</th>
           <th>Commission</th>
           <th>EUR/USD Rate</th>
           <th></th>
@@ -141,6 +143,9 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
               <td>{t.quantity}</td>
               <td>
                 {t.priceCurrency === 'USD' ? formatUSD(t.pricePerShare) : formatEUR(t.pricePerShare)}
+              </td>
+              <td>
+                {t.priceCurrency === 'USD' ? formatUSD(t.pricePerShare * t.quantity) : formatEUR(t.pricePerShare * t.quantity)}
               </td>
               <td>
                 {t.commission > 0
