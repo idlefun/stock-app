@@ -64,7 +64,10 @@ A client-server web application with a React SPA frontend and a Node.js/Express 
 1. **No database**: JSON files keep the project simple and portable. Sufficient for a single-user app.
 2. **Backend proxies all external APIs**: Frontend never calls Yahoo Finance or exchange rate APIs directly. This avoids CORS issues and allows server-side caching.
 3. **Average cost basis**: All gain/loss calculations use average cost per share across all buy transactions.
-4. **Dual currency everywhere**: Backend computes and returns both USD and EUR values. Frontend simply displays both.
+4. **EUR primary, USD secondary**: Dashboard shows EUR values prominently with USD as secondary. Uses Irish EUR format (en-IE locale).
+5. **EUR/USD exchange rate direction**: Rate represents what 1 EUR is worth in USD (e.g. 1.087). Conversions: EUR→USD = amount × rate, USD→EUR = amount / rate.
+6. **Split filtering**: Only real stock splits (N:1 or 1:N) are kept. Spinoff/restructuring adjustments from Yahoo Finance are filtered out.
+7. **Historical/delisted ticker support**: Manual ticker entry bypasses Yahoo Finance validation. Company name stored on transaction and used as fallback display name.
 
 ## API Endpoints
 
@@ -79,7 +82,11 @@ Returns detail for a single stock: all transactions, realized gain/loss per sell
 
 ### `POST /api/transactions`
 Create a new buy or sell transaction.
-Body: `{ type, ticker, quantity, pricePerShare, priceCurrency, commission, commissionCurrency, date }`
+Body: `{ type, ticker, quantity, pricePerShare, priceCurrency, commission, commissionCurrency, date, companyName, exchangeRate }`
+If `exchangeRate` is provided, it is used directly; otherwise the system auto-fetches the historical EUR/USD rate for the transaction date.
+
+### `PUT /api/transactions/:id`
+Update an existing transaction. Accepts partial updates for any transaction field including `exchangeRate` and `companyName`.
 
 ### `DELETE /api/transactions/:id`
 Delete a transaction by ID.
@@ -94,7 +101,7 @@ Returns current prices for given tickers (proxied from Yahoo Finance).
 Returns historical split events for a ticker from Yahoo Finance. Each split has `{ date, numerator, denominator, ratio, description }`. Cached in `data/splits.json`.
 
 ### `GET /api/exchange-rate`
-Returns current USD/EUR exchange rate.
+Returns current EUR/USD exchange rate (what 1 EUR is worth in USD).
 
 ## Data Model
 
@@ -104,12 +111,14 @@ Returns current USD/EUR exchange rate.
   "id": "uuid",
   "type": "buy | sell",
   "ticker": "AAPL",
+  "companyName": "Apple Inc.",
   "quantity": 10,
   "pricePerShare": 150.00,
   "priceCurrency": "USD",
   "commission": 4.95,
   "commissionCurrency": "EUR",
   "date": "2024-01-15",
+  "exchangeRate": 1.087,
   "createdAt": "2024-01-15T10:30:00Z"
 }
 ```
@@ -141,9 +150,9 @@ Returns current USD/EUR exchange rate.
 ### Exchange Rate Cache (stored in `data/exchange-rate.json`)
 ```json
 {
-  "rate": 0.92,
-  "from": "USD",
-  "to": "EUR",
+  "rate": 1.087,
+  "from": "EUR",
+  "to": "USD",
   "fetchedAt": "2024-01-15T10:30:00Z"
 }
 ```
