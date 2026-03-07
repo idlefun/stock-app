@@ -29,7 +29,11 @@ router.get('/', async (req, res) => {
     if (req.query.ticker) {
       transactions = transactions.filter(t => t.ticker === req.query.ticker);
     }
-    transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+    transactions.sort((a, b) => {
+      const dateDiff = new Date(b.date) - new Date(a.date);
+      if (dateDiff !== 0) return dateDiff;
+      return a.ticker.localeCompare(b.ticker);
+    });
     res.json(transactions);
   } catch (err) {
     res.status(500).json({ error: err.message });
