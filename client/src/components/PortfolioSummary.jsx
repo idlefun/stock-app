@@ -25,10 +25,10 @@ export default function PortfolioSummary({ totals, exchangeRate }) {
         <span className="value">{formatEUR(totals.realizedEUR)}</span>
         <span className="value secondary">{formatUSD(totals.realizedUSD)}</span>
       </div>
-      <div className={`summary-card ${(totals.dividendsEUR || 0) > 0 ? 'positive' : ''}`}>
-        <span className="label">Dividends</span>
-        <span className="value">{formatEUR(totals.dividendsEUR)}</span>
-        <span className="value secondary">{formatUSD(totals.dividendsUSD)}</span>
+      <div className={`summary-card ${(totals.netDividendsEUR || 0) > 0 ? 'positive' : ''}`}>
+        <span className="label">Dividends (net)</span>
+        <span className="value">{formatEUR(totals.netDividendsEUR)}</span>
+        {totals.taxPaidEUR > 0 && <span className="value secondary">tax: {formatEUR(totals.taxPaidEUR)}</span>}
       </div>
       <div className={`summary-card ${(totals.totalGainEUR || 0) >= 0 ? 'positive' : 'negative'}`}>
         <span className="label">Total Gain / Loss</span>

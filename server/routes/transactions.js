@@ -43,7 +43,7 @@ router.get('/', async (req, res) => {
 // POST /api/transactions
 router.post('/', async (req, res) => {
   try {
-    const { type, ticker, quantity, pricePerShare, priceCurrency, commission, commissionCurrency, date, companyName, exchangeRate: userRate, amount, amountCurrency } = req.body;
+    const { type, ticker, quantity, pricePerShare, priceCurrency, commission, commissionCurrency, date, companyName, exchangeRate: userRate, amount, amountCurrency, taxPaid } = req.body;
 
     if (!type || !ticker || !date) {
       return res.status(400).json({ error: 'Missing required fields: type, ticker, date' });
@@ -117,6 +117,7 @@ router.post('/', async (req, res) => {
     if (type === 'dividend') {
       transaction.amount = Number(amount);
       transaction.amountCurrency = amountCurrency;
+      transaction.taxPaid = Number(taxPaid) || 0;
     } else {
       transaction.quantity = Number(quantity);
       transaction.pricePerShare = Number(pricePerShare);

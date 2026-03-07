@@ -109,6 +109,7 @@ export default function TransactionForm({ onSubmit }) {
           date: form.date,
           amount: Number(form.amount),
           amountCurrency: form.amountCurrency || 'USD',
+          taxPaid: Number(form.taxPaid) || 0,
           exchangeRate: form.exchangeRate ? Number(form.exchangeRate) : undefined,
         };
       } else {
@@ -257,6 +258,10 @@ export default function TransactionForm({ onSubmit }) {
               <option value="USD">USD</option>
               <option value="EUR">EUR</option>
             </select>
+          </label>
+          <label>
+            Tax Paid (EUR)
+            <input type="number" step="0.01" min="0" value={form.taxPaid || ''} onChange={e => set('taxPaid', e.target.value)} placeholder="0.00" />
           </label>
           {(form.amountCurrency || 'USD') === 'USD' && (
             <label>

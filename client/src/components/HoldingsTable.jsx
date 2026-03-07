@@ -10,7 +10,7 @@ const COLUMNS = [
   { key: 'currentValueEUR', label: 'Holdings Value', getValue: s => s.currentValueEUR ?? 0 },
   { key: 'unrealizedEUR', label: 'Unrealized', getValue: s => s.unrealizedEUR ?? 0 },
   { key: 'realizedEUR', label: 'Realized', getValue: s => s.realizedEUR ?? 0 },
-  { key: 'dividendsEUR', label: 'Dividends', getValue: s => s.dividendsEUR ?? 0 },
+  { key: 'netDividendsEUR', label: 'Dividends', getValue: s => s.netDividendsEUR ?? 0 },
   { key: 'totalGainEUR', label: 'Total Gain', getValue: s => s.totalGainEUR ?? 0 },
   { key: 'allocationPct', label: 'Alloc', getValue: s => s.allocationPct ?? 0 },
 ];
@@ -84,9 +84,12 @@ export default function HoldingsTable({ stocks }) {
                 <div>{formatEUR(s.realizedEUR)}</div>
               ) : '—'}
             </td>
-            <td className={s.dividendsEUR > 0 ? 'positive' : ''}>
+            <td className={s.netDividendsEUR > 0 ? 'positive' : ''}>
               {s.dividendsEUR > 0 ? (
-                <div>{formatEUR(s.dividendsEUR)}</div>
+                <>
+                  <div>{formatEUR(s.netDividendsEUR)}</div>
+                  {s.taxPaidEUR > 0 && <div className="secondary">tax: {formatEUR(s.taxPaidEUR)}</div>}
+                </>
               ) : '—'}
             </td>
             <td className={s.totalGainEUR >= 0 ? 'positive' : 'negative'}>
