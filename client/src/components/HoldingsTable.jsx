@@ -54,7 +54,10 @@ export default function HoldingsTable({ stocks }) {
       <tbody>
         {sorted.map(s => (
           <tr key={s.ticker} onClick={() => navigate(`/stock/${s.ticker}`)} className="clickable">
-            <td className="ticker">{s.ticker}</td>
+            <td className="ticker">
+              {s.ticker}
+              {s.splitRatio > 1 && <span className="split-badge">{s.splitRatio}:1</span>}
+            </td>
             <td>{s.name}</td>
             <td>{s.quantityHeld > 0 ? s.quantityHeld : '—'}</td>
             <td>

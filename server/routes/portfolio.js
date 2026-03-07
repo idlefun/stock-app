@@ -154,6 +154,7 @@ router.get('/', async (req, res) => {
         totalInvestedEUR: summary.totalInvestedEUR,
         pctChange: totalPct,
         priceStale,
+        splitRatio: splits.reduce((acc, s) => acc * s.ratio, 1),
       };
 
       stocks.push(stock);
