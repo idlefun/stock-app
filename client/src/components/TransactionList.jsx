@@ -71,12 +71,12 @@ function EditRow({ transaction, onSave, onCancel }) {
             <option value="EUR">EUR</option>
           </select>
         </td>
-        <td>—</td>
         <td>
           {showRate ? (
             <input type="number" value={form.exchangeRate} onChange={e => set('exchangeRate', e.target.value)} min="0" step="0.0000001" size="10" placeholder="EUR/USD" />
           ) : '—'}
         </td>
+        <td>—</td>
         <td className="edit-actions">
           <button className="btn-save" onClick={handleSave} disabled={saving}>Save</button>
           <button className="btn-cancel" onClick={onCancel}>Cancel</button>
@@ -121,8 +121,8 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
           <th>Qty</th>
           <th>Price</th>
           <th>Commission</th>
-          <th>Total Cost</th>
           <th>EUR/USD Rate</th>
+          <th>Total Cost</th>
           <th></th>
         </tr>
       </thead>
@@ -149,6 +149,9 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
                   ? (t.commissionCurrency === 'USD' ? formatUSD(t.commission) : formatEUR(t.commission))
                   : '—'}
               </td>
+              <td className="exchange-rate-cell">
+                {hasUSD(t) && t.exchangeRate ? parseFloat(t.exchangeRate.toFixed(7)) : '—'}
+              </td>
               <td>
                 {(() => {
                   const rate = t.exchangeRate || 1;
@@ -160,9 +163,6 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
                     : 0;
                   return formatEUR(costEUR + commEUR);
                 })()}
-              </td>
-              <td className="exchange-rate-cell">
-                {hasUSD(t) && t.exchangeRate ? parseFloat(t.exchangeRate.toFixed(7)) : '—'}
               </td>
               <td className="row-actions">
                 <button className="btn-edit" onClick={() => setEditingId(t.id)} title="Edit">✎</button>
