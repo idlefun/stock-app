@@ -145,7 +145,16 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
                 {t.priceCurrency === 'USD' ? formatUSD(t.pricePerShare) : formatEUR(t.pricePerShare)}
               </td>
               <td>
-                {t.priceCurrency === 'USD' ? formatUSD(t.pricePerShare * t.quantity) : formatEUR(t.pricePerShare * t.quantity)}
+                {(() => {
+                  const rate = t.exchangeRate || 1;
+                  let costEUR = t.priceCurrency === 'EUR'
+                    ? t.pricePerShare * t.quantity
+                    : (t.pricePerShare * t.quantity) / rate;
+                  const commEUR = t.commission > 0
+                    ? (t.commissionCurrency === 'EUR' ? t.commission : t.commission / rate)
+                    : 0;
+                  return formatEUR(costEUR + commEUR);
+                })()}
               </td>
               <td>
                 {t.commission > 0
