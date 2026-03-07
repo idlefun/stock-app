@@ -25,6 +25,11 @@ export default function PortfolioSummary({ totals, exchangeRate }) {
         <span className="value">{formatEUR(totals.realizedEUR)}</span>
         <span className="value secondary">{formatUSD(totals.realizedUSD)}</span>
       </div>
+      <div className={`summary-card ${(totals.dividendsEUR || 0) > 0 ? 'positive' : ''}`}>
+        <span className="label">Dividends</span>
+        <span className="value">{formatEUR(totals.dividendsEUR)}</span>
+        <span className="value secondary">{formatUSD(totals.dividendsUSD)}</span>
+      </div>
       <div className={`summary-card ${(totals.totalGainEUR || 0) >= 0 ? 'positive' : 'negative'}`}>
         <span className="label">Total Gain / Loss</span>
         <span className="value">{formatEUR(totals.totalGainEUR)} ({formatPct(totals.pctChange)})</span>
@@ -32,8 +37,8 @@ export default function PortfolioSummary({ totals, exchangeRate }) {
       </div>
       {exchangeRate && (
         <div className="summary-card small">
-          <span className="label">USD/EUR Rate</span>
-          <span className="value">{exchangeRate.usdToEur?.toFixed(4)}</span>
+          <span className="label">EUR/USD Rate</span>
+          <span className="value">{exchangeRate.eurToUsd?.toFixed(4)}</span>
           {exchangeRate.stale && <span className="stale-badge">Stale</span>}
         </div>
       )}

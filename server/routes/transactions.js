@@ -16,7 +16,7 @@ async function saveTransactions(transactions) {
 
 function getHeldQuantity(transactions, ticker) {
   return transactions
-    .filter(t => t.ticker === ticker)
+    .filter(t => t.ticker === ticker && t.type !== 'dividend')
     .reduce((sum, t) => {
       return t.type === 'buy' ? sum + t.quantity : sum - t.quantity;
     }, 0);
@@ -43,22 +43,38 @@ router.get('/', async (req, res) => {
 // POST /api/transactions
 router.post('/', async (req, res) => {
   try {
-    const { type, ticker, quantity, pricePerShare, priceCurrency, commission, commissionCurrency, date, companyName, exchangeRate: userRate } = req.body;
+    const { type, ticker, quantity, pricePerShare, priceCurrency, commission, commissionCurrency, date, companyName, exchangeRate: userRate, amount, amountCurrency } = req.body;
 
-    if (!type || !ticker || !quantity || !pricePerShare || !priceCurrency || !date) {
-      return res.status(400).json({ error: 'Missing required fields: type, ticker, quantity, pricePerShare, priceCurrency, date' });
+    if (!type || !ticker || !date) {
+      return res.status(400).json({ error: 'Missing required fields: type, ticker, date' });
     }
-    if (!['buy', 'sell'].includes(type)) {
-      return res.status(400).json({ error: 'Type must be "buy" or "sell"' });
+    if (!['buy', 'sell', 'dividend'].includes(type)) {
+      return res.status(400).json({ error: 'Type must be "buy", "sell", or "dividend"' });
     }
-    if (!['USD', 'EUR'].includes(priceCurrency)) {
-      return res.status(400).json({ error: 'priceCurrency must be "USD" or "EUR"' });
-    }
-    if (commissionCurrency && !['USD', 'EUR'].includes(commissionCurrency)) {
-      return res.status(400).json({ error: 'commissionCurrency must be "USD" or "EUR"' });
-    }
-    if (quantity <= 0) {
-      return res.status(400).json({ error: 'Quantity must be positive' });
+
+    if (type === 'dividend') {
+      if (!amount || !amountCurrency) {
+        return res.status(400).json({ error: 'Missing required fields for dividend: amount, amountCurrency' });
+      }
+      if (!['USD', 'EUR'].includes(amountCurrency)) {
+        return res.status(400).json({ error: 'amountCurrency must be "USD" or "EUR"' });
+      }
+      if (Number(amount) <= 0) {
+        return res.status(400).json({ error: 'Amount must be positive' });
+      }
+    } else {
+      if (!quantity || !pricePerShare || !priceCurrency) {
+        return res.status(400).json({ error: 'Missing required fields: quantity, pricePerShare, priceCurrency' });
+      }
+      if (!['USD', 'EUR'].includes(priceCurrency)) {
+        return res.status(400).json({ error: 'priceCurrency must be "USD" or "EUR"' });
+      }
+      if (commissionCurrency && !['USD', 'EUR'].includes(commissionCurrency)) {
+        return res.status(400).json({ error: 'commissionCurrency must be "USD" or "EUR"' });
+      }
+      if (quantity <= 0) {
+        return res.status(400).json({ error: 'Quantity must be positive' });
+      }
     }
 
     const transactions = await getTransactions();
@@ -73,9 +89,11 @@ router.post('/', async (req, res) => {
       }
     }
 
-    // Fetch historical USD/EUR rate for USD transactions
+    // Fetch historical EUR/USD rate for USD transactions
     let exchangeRate = null;
-    const hasCurrencyUSD = priceCurrency === 'USD' || (!commissionCurrency || commissionCurrency === 'USD');
+    const currencyForRate = type === 'dividend' ? amountCurrency : priceCurrency;
+    const commCurrForRate = type === 'dividend' ? null : commissionCurrency;
+    const hasCurrencyUSD = currencyForRate === 'USD' || (commCurrForRate && commCurrForRate === 'USD');
     if (hasCurrencyUSD) {
       if (userRate != null && userRate !== '') {
         exchangeRate = Number(userRate);
@@ -91,15 +109,21 @@ router.post('/', async (req, res) => {
       type,
       ticker: ticker.toUpperCase(),
       companyName: companyName?.trim() || undefined,
-      quantity: Number(quantity),
-      pricePerShare: Number(pricePerShare),
-      priceCurrency,
-      commission: Number(commission) || 0,
-      commissionCurrency: commissionCurrency || priceCurrency,
       date,
       exchangeRate,
       createdAt: new Date().toISOString()
     };
+
+    if (type === 'dividend') {
+      transaction.amount = Number(amount);
+      transaction.amountCurrency = amountCurrency;
+    } else {
+      transaction.quantity = Number(quantity);
+      transaction.pricePerShare = Number(pricePerShare);
+      transaction.priceCurrency = priceCurrency;
+      transaction.commission = Number(commission) || 0;
+      transaction.commissionCurrency = commissionCurrency || priceCurrency;
+    }
 
     transactions.push(transaction);
     await saveTransactions(transactions);
@@ -120,8 +144,8 @@ router.put('/:id', async (req, res) => {
 
     const { type, ticker, quantity, pricePerShare, priceCurrency, commission, commissionCurrency, date, exchangeRate, companyName } = req.body;
 
-    if (type && !['buy', 'sell'].includes(type)) {
-      return res.status(400).json({ error: 'Type must be "buy" or "sell"' });
+    if (type && !['buy', 'sell', 'dividend'].includes(type)) {
+      return res.status(400).json({ error: 'Type must be "buy", "sell", or "dividend"' });
     }
     if (priceCurrency && !['USD', 'EUR'].includes(priceCurrency)) {
       return res.status(400).json({ error: 'priceCurrency must be "USD" or "EUR"' });

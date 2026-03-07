@@ -31,6 +31,7 @@ tr.clickable:hover { background: #f0f4ff; }
 .ticker { font-weight: 700; color: #1a1a2e; }
 .type-buy { color: #16a34a; font-weight: 600; }
 .type-sell { color: #dc2626; font-weight: 600; }
+.type-dividend { color: #2563eb; font-weight: 600; }
 .positive { color: #16a34a; }
 .negative { color: #dc2626; }
 .secondary { color: #888; font-size: 0.85rem; }

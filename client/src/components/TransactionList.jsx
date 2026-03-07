@@ -3,6 +3,7 @@ import { formatUSD, formatEUR, formatDate } from '../lib/format';
 import { api } from '../lib/api';
 
 function hasUSD(t) {
+  if (t.type === 'dividend') return t.amountCurrency === 'USD';
   return t.priceCurrency === 'USD' || t.commissionCurrency === 'USD';
 }
 
@@ -140,20 +141,25 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
               <td>{formatDate(t.date)}</td>
               <td className={`type-${t.type}`}>{t.type.toUpperCase()}</td>
               <td>{t.ticker}</td>
-              <td>{t.quantity}</td>
+              <td>{t.type === 'dividend' ? '—' : t.quantity}</td>
               <td>
-                {t.priceCurrency === 'USD' ? formatUSD(t.pricePerShare) : formatEUR(t.pricePerShare)}
+                {t.type === 'dividend'
+                  ? (t.amountCurrency === 'USD' ? formatUSD(t.amount) : formatEUR(t.amount))
+                  : (t.priceCurrency === 'USD' ? formatUSD(t.pricePerShare) : formatEUR(t.pricePerShare))}
               </td>
               <td>
-                {t.commission > 0
+                {t.type === 'dividend' ? '—' : (t.commission > 0
                   ? (t.commissionCurrency === 'USD' ? formatUSD(t.commission) : formatEUR(t.commission))
-                  : '—'}
+                  : '—')}
               </td>
               <td className="exchange-rate-cell">
                 {hasUSD(t) && t.exchangeRate ? parseFloat(t.exchangeRate.toFixed(7)) : '—'}
               </td>
               <td>
-                {(() => {
+                {t.type === 'dividend' ? (() => {
+                  const rate = t.exchangeRate || 1;
+                  return formatEUR(t.amountCurrency === 'EUR' ? t.amount : t.amount / rate);
+                })() : (() => {
                   const rate = t.exchangeRate || 1;
                   let costEUR = t.priceCurrency === 'EUR'
                     ? t.pricePerShare * t.quantity
