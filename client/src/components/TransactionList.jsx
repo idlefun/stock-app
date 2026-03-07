@@ -73,7 +73,7 @@ function EditRow({ transaction, onSave, onCancel }) {
         </td>
         <td>
           {showRate ? (
-            <input type="number" value={form.exchangeRate} onChange={e => set('exchangeRate', e.target.value)} min="0" step="0.0001" size="8" placeholder="EUR/USD" />
+            <input type="number" value={form.exchangeRate} onChange={e => set('exchangeRate', e.target.value)} min="0" step="0.0000001" size="10" placeholder="EUR/USD" />
           ) : '—'}
         </td>
         <td className="edit-actions">
@@ -148,7 +148,7 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
                   : '—'}
               </td>
               <td className="exchange-rate-cell">
-                {hasUSD(t) && t.exchangeRate ? t.exchangeRate.toFixed(4) : '—'}
+                {hasUSD(t) && t.exchangeRate ? t.exchangeRate.toFixed(7) : '—'}
               </td>
               <td className="row-actions">
                 <button className="btn-edit" onClick={() => setEditingId(t.id)} title="Edit">✎</button>

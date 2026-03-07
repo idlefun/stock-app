@@ -214,7 +214,7 @@ export default function TransactionForm({ onSubmit }) {
         {(form.priceCurrency === 'USD' || form.commissionCurrency === 'USD') && (
           <label>
             EUR/USD Rate
-            <input type="number" step="0.0001" min="0" value={form.exchangeRate || ''} onChange={e => set('exchangeRate', e.target.value)} placeholder="e.g. 1.0870" />
+            <input type="number" step="0.0000001" min="0" value={form.exchangeRate || ''} onChange={e => set('exchangeRate', e.target.value)} placeholder="e.g. 1.0870" />
           </label>
         )}
         <label className="submit-label">

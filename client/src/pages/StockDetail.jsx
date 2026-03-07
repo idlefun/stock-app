@@ -110,7 +110,7 @@ export default function StockDetail() {
               </td>
               <td className="exchange-rate-cell">
                 {(t.priceCurrency === 'USD' || t.commissionCurrency === 'USD') && t.exchangeRate
-                  ? t.exchangeRate.toFixed(4)
+                  ? t.exchangeRate.toFixed(7)
                   : '—'}
               </td>
               <td>
