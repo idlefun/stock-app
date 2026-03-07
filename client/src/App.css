@@ -34,6 +34,8 @@ tr.clickable:hover { background: #f0f4ff; }
 .positive { color: #16a34a; }
 .negative { color: #dc2626; }
 .secondary { color: #888; font-size: 0.85rem; }
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable:hover { background: #eef1f6; }
 
 /* Stale badge */
 .stale-badge { display: inline-block; background: #fbbf24; color: #78350f; font-size: 0.7rem; padding: 1px 6px; border-radius: 4px; margin-left: 6px; font-weight: 600; }
