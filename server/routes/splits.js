@@ -37,13 +37,15 @@ async function getSplits(ticker) {
     });
 
     const splitEvents = result.events?.splits || [];
-    const splits = splitEvents.map(s => ({
-      date: s.date.toISOString().split('T')[0],
-      numerator: s.numerator,
-      denominator: s.denominator,
-      ratio: s.numerator / s.denominator,
-      description: `${s.numerator}:${s.denominator} Split`,
-    }));
+    const splits = splitEvents
+      .map(s => ({
+        date: s.date.toISOString().split('T')[0],
+        numerator: s.numerator,
+        denominator: s.denominator,
+        ratio: s.numerator / s.denominator,
+        description: `${s.numerator}:${s.denominator} Split`,
+      }))
+      .filter(s => s.ratio <= 0.9 || s.ratio >= 1.1);
 
     splitsCache[ticker] = {
       splits,
