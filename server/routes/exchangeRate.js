@@ -27,14 +27,14 @@ async function fetchRate() {
   }
 
   try {
-    const response = await fetch('https://api.frankfurter.app/latest?from=USD&to=EUR');
+    const response = await fetch('https://api.frankfurter.app/latest?from=EUR&to=USD');
     if (!response.ok) throw new Error(`Exchange rate API returned ${response.status}`);
     const data = await response.json();
 
     rateCache = {
-      rate: data.rates.EUR,
-      from: 'USD',
-      to: 'EUR',
+      rate: data.rates.USD,
+      from: 'EUR',
+      to: 'USD',
       fetchedAt: new Date().toISOString()
     };
     await saveCache();
@@ -50,10 +50,10 @@ async function fetchRate() {
 
 async function fetchHistoricalRate(dateStr) {
   try {
-    const response = await fetch(`https://api.frankfurter.app/${dateStr}?from=USD&to=EUR`);
+    const response = await fetch(`https://api.frankfurter.app/${dateStr}?from=EUR&to=USD`);
     if (!response.ok) throw new Error(`Exchange rate API returned ${response.status}`);
     const data = await response.json();
-    return data.rates.EUR;
+    return data.rates.USD;
   } catch (err) {
     // Fall back to current rate if historical not available
     const current = await fetchRate();

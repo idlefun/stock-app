@@ -76,7 +76,7 @@ export default function StockDetail() {
             <th>Original Price</th>
             {hasSplits && <th>Adjusted Price</th>}
             <th>Commission</th>
-            <th>USD/EUR Rate</th>
+            <th>EUR/USD Rate</th>
             <th>Realized Gain/Loss</th>
           </tr>
         </thead>

@@ -73,7 +73,7 @@ function EditRow({ transaction, onSave, onCancel }) {
         </td>
         <td>
           {showRate ? (
-            <input type="number" value={form.exchangeRate} onChange={e => set('exchangeRate', e.target.value)} min="0" step="0.0001" size="8" placeholder="USD/EUR" />
+            <input type="number" value={form.exchangeRate} onChange={e => set('exchangeRate', e.target.value)} min="0" step="0.0001" size="8" placeholder="EUR/USD" />
           ) : '—'}
         </td>
         <td className="edit-actions">
@@ -120,7 +120,7 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
           <th>Qty</th>
           <th>Price</th>
           <th>Commission</th>
-          <th>USD/EUR Rate</th>
+          <th>EUR/USD Rate</th>
           <th></th>
         </tr>
       </thead>
