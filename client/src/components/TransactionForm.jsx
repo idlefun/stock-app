@@ -22,11 +22,21 @@ export default function TransactionForm({ onSubmit }) {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [manualTicker, setManualTicker] = useState(false);
+  const [holdings, setHoldings] = useState([]);
   const debounceRef = useRef(null);
 
   function set(field, value) {
     setForm(prev => ({ ...prev, [field]: value }));
   }
+
+  // Fetch holdings for sell mode
+  useEffect(() => {
+    if (form.type === 'sell') {
+      api.getPortfolio().then(data => {
+        setHoldings(data.stocks.filter(s => s.quantityHeld > 0));
+      }).catch(() => setHoldings([]));
+    }
+  }, [form.type]);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -121,49 +131,90 @@ export default function TransactionForm({ onSubmit }) {
       <div className="form-row">
         <label>
           Type
-          <select value={form.type} onChange={e => set('type', e.target.value)}>
+          <select value={form.type} onChange={e => {
+            const newType = e.target.value;
+            set('type', newType);
+            if (newType === 'sell') {
+              set('ticker', '');
+              setTickerValid(false);
+              setTickerName('');
+              setManualTicker(false);
+              setShowDropdown(false);
+              setSearchResults([]);
+            }
+          }}>
             <option value="buy">Buy</option>
             <option value="sell">Sell</option>
           </select>
         </label>
 
-        <label className="ticker-field">
-          Ticker
-          <input
-            type="text"
-            value={form.ticker}
-            onChange={e => set('ticker', e.target.value.toUpperCase())}
-            placeholder="e.g. AAPL"
-            required
-          />
-          {!manualTicker && searching && <span className="ticker-status">Searching...</span>}
-          {tickerValid && <span className="ticker-status valid">{tickerName}</span>}
-          {!manualTicker && showDropdown && searchResults.length > 0 && (
-            <ul className="ticker-dropdown">
-              {searchResults.map(r => (
-                <li key={r.ticker} onClick={() => selectTicker(r)}>
-                  <strong>{r.ticker}</strong> — {r.name} <span className="exchange">({r.exchange})</span>
-                </li>
-              ))}
-            </ul>
-          )}
-          <label className="manual-ticker-toggle">
-            <input
-              type="checkbox"
-              checked={manualTicker}
+        {form.type === 'sell' ? (
+          <label>
+            Ticker
+            <select
+              value={form.ticker}
               onChange={e => {
-                setManualTicker(e.target.checked);
-                setTickerValid(false);
-                setTickerName('');
-                setShowDropdown(false);
-                setSearchResults([]);
+                const ticker = e.target.value;
+                set('ticker', ticker);
+                const held = holdings.find(h => h.ticker === ticker);
+                if (held) {
+                  setTickerValid(true);
+                  setTickerName(`${held.name} (${held.quantityHeld} held)`);
+                } else {
+                  setTickerValid(false);
+                  setTickerName('');
+                }
               }}
-            />
-            Historical / delisted
+              required
+            >
+              <option value="">Select stock...</option>
+              {holdings.map(h => (
+                <option key={h.ticker} value={h.ticker}>
+                  {h.ticker} — {h.name} ({h.quantityHeld} shares)
+                </option>
+              ))}
+            </select>
+            {tickerValid && <span className="ticker-status valid">{tickerName}</span>}
           </label>
-        </label>
+        ) : (
+          <label className="ticker-field">
+            Ticker
+            <input
+              type="text"
+              value={form.ticker}
+              onChange={e => set('ticker', e.target.value.toUpperCase())}
+              placeholder="e.g. AAPL"
+              required
+            />
+            {!manualTicker && searching && <span className="ticker-status">Searching...</span>}
+            {tickerValid && <span className="ticker-status valid">{tickerName}</span>}
+            {!manualTicker && showDropdown && searchResults.length > 0 && (
+              <ul className="ticker-dropdown">
+                {searchResults.map(r => (
+                  <li key={r.ticker} onClick={() => selectTicker(r)}>
+                    <strong>{r.ticker}</strong> — {r.name} <span className="exchange">({r.exchange})</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <label className="manual-ticker-toggle">
+              <input
+                type="checkbox"
+                checked={manualTicker}
+                onChange={e => {
+                  setManualTicker(e.target.checked);
+                  setTickerValid(false);
+                  setTickerName('');
+                  setShowDropdown(false);
+                  setSearchResults([]);
+                }}
+              />
+              Historical / delisted
+            </label>
+          </label>
+        )}
 
-        {manualTicker && (
+        {form.type === 'buy' && manualTicker && (
           <label>
             Company Name
             <input
@@ -195,7 +246,9 @@ export default function TransactionForm({ onSubmit }) {
         </label>
         <label>
           Quantity
-          <input type="number" step="1" min="1" value={form.quantity} onChange={e => set('quantity', e.target.value)} required />
+          <input type="number" step="1" min="1"
+            max={form.type === 'sell' ? (holdings.find(h => h.ticker === form.ticker)?.quantityHeld || '') : ''}
+            value={form.quantity} onChange={e => set('quantity', e.target.value)} required />
         </label>
       </div>
 
