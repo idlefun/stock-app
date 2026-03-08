@@ -219,7 +219,7 @@ export default function TransactionForm({ onSubmit }) {
           </label>
         )}
 
-        <label>
+        <label className="narrow-date">
           Date
           <input type="date" value={form.date} onChange={e => set('date', e.target.value)} required />
         </label>

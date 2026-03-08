@@ -47,6 +47,7 @@ th.sortable:hover { background: #eef1f6; }
 .form-row { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; align-items: flex-end; }
 .form-row label { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; font-weight: 600; color: #555; flex: 1; min-width: 120px; }
 .form-row label.narrow { flex: 0 0 auto; min-width: 80px; max-width: 100px; }
+.form-row label.narrow-date { flex: 0 0 auto; min-width: 130px; max-width: 150px; }
 .form-row label.input-pair { flex: 1.5; min-width: 180px; }
 .form-row .pair-row { display: flex; gap: 6px; }
 .form-row .pair-row input { flex: 1; min-width: 0; }
