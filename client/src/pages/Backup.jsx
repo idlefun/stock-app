@@ -31,7 +31,7 @@ export default function Backup() {
     try {
       const text = await file.text();
       const data = JSON.parse(text);
-      if (!data['transactions.json'] && !data['manual-prices.json']) {
+      if (!data['transactions.json'] && !data['manual-prices.json'] && !data['hist-prices.json']) {
         throw new Error('Invalid backup file — no recognized data found.');
       }
       const result = await api.restoreBackup(data);
@@ -49,7 +49,7 @@ export default function Backup() {
 
       <div className="backup-section">
         <h3>Export Backup</h3>
-        <p className="secondary">Download all transactions and manual prices as a JSON file.</p>
+        <p className="secondary">Download all transactions, manual prices, and historical price cache as a JSON file.</p>
         <button className="btn-export" onClick={handleDownload} disabled={downloading}>
           {downloading ? 'Downloading...' : 'Download Backup'}
         </button>
