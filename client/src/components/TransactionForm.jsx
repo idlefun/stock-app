@@ -121,7 +121,7 @@ export default function TransactionForm({ onSubmit }) {
       {error && <div className="form-error">{error}</div>}
 
       <div className="form-row">
-        <label>
+        <label className="narrow">
           Type
           <select value={form.type} onChange={e => {
             const newType = e.target.value;
@@ -225,16 +225,15 @@ export default function TransactionForm({ onSubmit }) {
 
       {form.type === 'dividend' ? (
         <div className="form-row">
-          <label>
+          <label className="input-pair">
             Amount
-            <input type="number" step="0.01" min="0" value={form.amount || ''} onChange={e => set('amount', e.target.value)} required />
-          </label>
-          <label>
-            Currency
-            <select value={form.amountCurrency || 'USD'} onChange={e => set('amountCurrency', e.target.value)}>
-              <option value="USD">USD</option>
-              <option value="EUR">EUR</option>
-            </select>
+            <div className="pair-row">
+              <input type="number" step="0.01" min="0" value={form.amount || ''} onChange={e => set('amount', e.target.value)} required />
+              <select value={form.amountCurrency || 'USD'} onChange={e => set('amountCurrency', e.target.value)}>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+              </select>
+            </div>
           </label>
           <label>
             Tax Paid (EUR)
@@ -254,59 +253,52 @@ export default function TransactionForm({ onSubmit }) {
           </label>
         </div>
       ) : (
-        <>
-          <div className="form-row">
-            <label>
-              Price per Share
+        <div className="form-row">
+          <label className="input-pair">
+            Price
+            <div className="pair-row">
               <input type="number" step="0.01" min="0" value={form.pricePerShare} onChange={e => set('pricePerShare', e.target.value)} required />
-            </label>
-            <label>
-              Price Currency
               <select value={form.priceCurrency} onChange={e => set('priceCurrency', e.target.value)}>
                 <option value="USD">USD</option>
                 <option value="EUR">EUR</option>
               </select>
-            </label>
-            <label>
-              Quantity
-              <input type="number" step="1" min="1"
-                max={form.type === 'sell' ? (holdings.find(h => h.ticker === form.ticker)?.quantityHeld || '') : ''}
-                value={form.quantity} onChange={e => set('quantity', e.target.value)} required />
-            </label>
-          </div>
-
-          <div className="form-row">
-            <label>
-              Commission
+            </div>
+          </label>
+          <label>
+            Quantity
+            <input type="number" step="1" min="1"
+              max={form.type === 'sell' ? (holdings.find(h => h.ticker === form.ticker)?.quantityHeld || '') : ''}
+              value={form.quantity} onChange={e => set('quantity', e.target.value)} required />
+          </label>
+          <label className="input-pair">
+            Commission
+            <div className="pair-row">
               <input type="number" step="0.01" min="0" value={form.commission} onChange={e => set('commission', e.target.value)} />
-            </label>
-            <label>
-              Commission Currency
               <select value={form.commissionCurrency} onChange={e => set('commissionCurrency', e.target.value)}>
                 <option value="USD">USD</option>
                 <option value="EUR">EUR</option>
               </select>
+            </div>
+          </label>
+          {form.type === 'sell' && (
+            <label>
+              Tax (EUR)
+              <input type="number" step="0.01" min="0" value={form.taxPaid || ''} onChange={e => set('taxPaid', e.target.value)} placeholder="0.00" />
             </label>
-            {form.type === 'sell' && (
-              <label>
-                Tax Paid (EUR)
-                <input type="number" step="0.01" min="0" value={form.taxPaid || ''} onChange={e => set('taxPaid', e.target.value)} placeholder="0.00" />
-              </label>
-            )}
-            {(form.priceCurrency === 'USD' || form.commissionCurrency === 'USD') && (
-              <label>
-                EUR/USD Rate
-                <input type="number" step="0.0000001" min="0" value={form.exchangeRate || ''} onChange={e => set('exchangeRate', e.target.value)} placeholder="e.g. 1.0870" />
-              </label>
-            )}
-            <label className="submit-label">
-              &nbsp;
-              <button type="submit" disabled={submitting || !tickerValid}>
-                {submitting ? 'Saving...' : 'Add Transaction'}
-              </button>
+          )}
+          {(form.priceCurrency === 'USD' || form.commissionCurrency === 'USD') && (
+            <label>
+              EUR/USD Rate
+              <input type="number" step="0.0000001" min="0" value={form.exchangeRate || ''} onChange={e => set('exchangeRate', e.target.value)} placeholder="1.0870" />
             </label>
-          </div>
-        </>
+          )}
+          <label className="submit-label">
+            &nbsp;
+            <button type="submit" disabled={submitting || !tickerValid}>
+              {submitting ? 'Saving...' : form.type === 'sell' ? 'Sell' : 'Buy'}
+            </button>
+          </label>
+        </div>
       )}
     </form>
   );

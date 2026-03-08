@@ -44,15 +44,20 @@ th.sortable:hover { background: #eef1f6; }
 /* Transaction form */
 .transaction-form { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 .transaction-form h3 { margin-bottom: 16px; }
-.form-row { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
-.form-row label { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; font-weight: 600; color: #555; flex: 1; min-width: 140px; }
+.form-row { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; align-items: flex-end; }
+.form-row label { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; font-weight: 600; color: #555; flex: 1; min-width: 120px; }
+.form-row label.narrow { flex: 0 0 auto; min-width: 80px; max-width: 100px; }
+.form-row label.input-pair { flex: 1.5; min-width: 180px; }
+.form-row .pair-row { display: flex; gap: 6px; }
+.form-row .pair-row input { flex: 1; min-width: 0; }
+.form-row .pair-row select { flex: 0 0 68px; width: 68px; }
 .form-row input, .form-row select { padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.9rem; }
 .form-row input:focus, .form-row select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.2); }
-.form-row button { padding: 8px 20px; background: #1a1a2e; color: #fff; border: none; border-radius: 6px; font-size: 0.9rem; cursor: pointer; font-weight: 600; }
+.form-row button { padding: 8px 20px; background: #1a1a2e; color: #fff; border: none; border-radius: 6px; font-size: 0.9rem; cursor: pointer; font-weight: 600; white-space: nowrap; }
 .form-row button:hover { background: #2d2d4e; }
 .form-row button:disabled { opacity: 0.5; cursor: not-allowed; }
 .form-error { background: #fef2f2; color: #dc2626; padding: 8px 12px; border-radius: 6px; margin-bottom: 12px; font-size: 0.9rem; }
-.submit-label { justify-content: flex-end; }
+.submit-label { justify-content: flex-end; flex: 0 0 auto !important; min-width: auto !important; }
 
 /* Ticker autocomplete */
 .ticker-field { position: relative; }
