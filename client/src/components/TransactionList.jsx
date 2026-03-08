@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { formatUSD, formatEUR, formatDate } from '../lib/format';
 import { api } from '../lib/api';
 
@@ -25,9 +25,42 @@ function EditRow({ transaction, onSave, onCancel }) {
   });
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [searchResults, setSearchResults] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const debounceRef = useRef(null);
 
   function set(field, value) {
     setForm(prev => ({ ...prev, [field]: value }));
+  }
+
+  useEffect(() => {
+    if (isDividend) return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    const q = form.ticker.trim();
+    if (q.length < 1) {
+      setSearchResults([]);
+      setShowDropdown(false);
+      return;
+    }
+    debounceRef.current = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const results = await api.searchTicker(q);
+        setSearchResults(results);
+        setShowDropdown(results.length > 0);
+      } catch {
+        setSearchResults([]);
+      }
+      setSearching(false);
+    }, 400);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [form.ticker]);
+
+  function selectTicker(result) {
+    set('ticker', result.ticker);
+    setShowDropdown(false);
+    setSearchResults([]);
   }
 
   async function handleSave() {
@@ -76,7 +109,19 @@ function EditRow({ transaction, onSave, onCancel }) {
             <option value="dividend">DIV</option>
           </select>
         </td>
-        <td><input type="text" value={form.ticker} onChange={e => set('ticker', e.target.value.toUpperCase())} size="6" /></td>
+        <td className="ticker-field" style={{ position: 'relative' }}>
+          <input type="text" value={form.ticker} onChange={e => set('ticker', e.target.value.toUpperCase())} size="6" />
+          {!isDividend && searching && <span className="ticker-status" style={{ fontSize: '0.7rem' }}>...</span>}
+          {!isDividend && showDropdown && searchResults.length > 0 && (
+            <ul className="ticker-dropdown">
+              {searchResults.map(r => (
+                <li key={r.ticker} onClick={() => selectTicker(r)}>
+                  <strong>{r.ticker}</strong> — {r.name} <span className="exchange">({r.exchange})</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </td>
         {isDividend ? (
           <>
             <td>—</td>
