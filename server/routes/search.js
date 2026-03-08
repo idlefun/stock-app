@@ -23,7 +23,7 @@ router.get('/', async (req, res) => {
     const quotes = [];
     for (const results of allResults) {
       for (const item of (results.quotes || [])) {
-        if (item.quoteType === 'EQUITY' && !seen.has(item.symbol)) {
+        if ((item.quoteType === 'EQUITY' || item.quoteType === 'ETF') && !seen.has(item.symbol)) {
           seen.add(item.symbol);
           quotes.push({
             ticker: item.symbol,
