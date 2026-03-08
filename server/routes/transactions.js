@@ -2,6 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const { readOrDefault, writeJSON } = require('../lib/storage');
 const { fetchHistoricalRate } = require('./exchangeRate');
+const { getSplits, splitMultiplier, loadCache: loadSplitsCache } = require('./splits');
 
 const router = express.Router();
 const FILENAME = 'transactions.json';
@@ -14,11 +15,13 @@ async function saveTransactions(transactions) {
   return writeJSON(FILENAME, transactions);
 }
 
-function getHeldQuantity(transactions, ticker) {
+function getHeldQuantity(transactions, ticker, splits = []) {
   return transactions
     .filter(t => t.ticker === ticker && t.type !== 'dividend')
     .reduce((sum, t) => {
-      return t.type === 'buy' ? sum + t.quantity : sum - t.quantity;
+      const mult = splitMultiplier(splits, t.date);
+      const adjQty = t.quantity * mult;
+      return t.type === 'buy' ? sum + adjQty : sum - adjQty;
     }, 0);
 }
 
@@ -79,9 +82,12 @@ router.post('/', async (req, res) => {
 
     const transactions = await getTransactions();
 
-    // Sell validation
+    // Sell validation (split-adjusted)
     if (type === 'sell') {
-      const held = getHeldQuantity(transactions, ticker);
+      await loadSplitsCache();
+      let splits = [];
+      try { splits = await getSplits(ticker); } catch { /* no splits */ }
+      const held = getHeldQuantity(transactions, ticker, splits);
       if (quantity > held) {
         return res.status(400).json({
           error: `Cannot sell ${quantity} shares of ${ticker}. Only ${held} shares held.`
@@ -173,10 +179,13 @@ router.put('/:id', async (req, res) => {
     if (amountCurrency !== undefined) updated.amountCurrency = amountCurrency;
     if (taxPaid !== undefined) updated.taxPaid = Number(taxPaid) || 0;
 
-    // Sell validation for updated transaction
+    // Sell validation for updated transaction (split-adjusted)
     if (updated.type === 'sell') {
+      await loadSplitsCache();
+      let splits = [];
+      try { splits = await getSplits(updated.ticker); } catch { /* no splits */ }
       const otherTxns = transactions.filter((_, i) => i !== index);
-      const held = getHeldQuantity(otherTxns, updated.ticker);
+      const held = getHeldQuantity(otherTxns, updated.ticker, splits);
       if (updated.quantity > held) {
         return res.status(400).json({
           error: `Cannot sell ${updated.quantity} shares of ${updated.ticker}. Only ${held} shares held.`
