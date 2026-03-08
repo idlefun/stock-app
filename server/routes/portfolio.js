@@ -181,7 +181,13 @@ router.get('/', async (req, res) => {
         totalInvestedEUR: summary.totalInvestedEUR,
         pctChange: totalPct,
         priceStale,
-        splitRatio: splitMultiplier(splits, allTxns.reduce((earliest, t) => t.date < earliest ? t.date : earliest, allTxns[0].date)),
+        splitRatio: (() => {
+          const earliestDate = allTxns.reduce((earliest, t) => t.date < earliest ? t.date : earliest, allTxns[0].date);
+          const relevantSplits = summary.quantityHeld === 0 && holding.sells.length > 0
+            ? splits.filter(s => s.date <= [...holding.sells].sort((a, b) => new Date(b.date) - new Date(a.date))[0].date)
+            : splits;
+          return splitMultiplier(relevantSplits, earliestDate);
+        })(),
       };
 
       stocks.push(stock);
@@ -352,7 +358,12 @@ router.get('/:ticker', async (req, res) => {
       currentPriceUSD: currentPrice,
       currentPriceEUR: currentPrice ? convertToEUR(currentPrice, 'USD', eurToUsd) : null,
       priceStale,
-      splits,
+      splits: totalAdjQty === 0 && tickerTxns.some(t => t.type === 'sell')
+        ? splits.filter(s => {
+            const lastSellDate = [...tickerTxns].filter(t => t.type === 'sell').pop().date;
+            return s.date <= lastSellDate;
+          })
+        : splits,
       transactions: detail,
       realizedUSD,
       realizedEUR: convertToEUR(realizedUSD, 'USD', eurToUsd),
