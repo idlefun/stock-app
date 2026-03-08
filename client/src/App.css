@@ -61,7 +61,7 @@ th.sortable:hover { background: #eef1f6; }
 .submit-label { justify-content: flex-end; flex: 0 0 auto !important; min-width: auto !important; }
 
 /* Ticker autocomplete */
-.ticker-field { position: relative; flex: 1 1 0 !important; min-width: 120px !important; }
+.ticker-field { position: relative; flex: 0 1 auto !important; min-width: 120px !important; width: 240px; }
 .ticker-input-row { display: flex; align-items: center; gap: 6px; }
 .ticker-input-row input[type="text"] { flex: 1; min-width: 0; }
 .ticker-status { font-size: 0.8rem; font-weight: 400; }
