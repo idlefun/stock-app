@@ -185,9 +185,11 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
                   : (t.priceCurrency === 'USD' ? formatUSD(t.pricePerShare) : formatEUR(t.pricePerShare))}
               </td>
               <td>
-                {t.type === 'dividend' ? '—' : (t.commission > 0
-                  ? (t.commissionCurrency === 'USD' ? formatUSD(t.commission) : formatEUR(t.commission))
-                  : '—')}
+                {t.type === 'dividend'
+                  ? (t.taxPaid > 0 ? formatEUR(t.taxPaid) : '—')
+                  : (t.commission > 0
+                    ? (t.commissionCurrency === 'USD' ? formatUSD(t.commission) : formatEUR(t.commission))
+                    : '—')}
               </td>
               <td className="exchange-rate-cell">
                 {hasUSD(t) && t.exchangeRate ? parseFloat(t.exchangeRate.toFixed(7)) : '—'}
@@ -195,7 +197,8 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
               <td>
                 {t.type === 'dividend' ? (() => {
                   const rate = t.exchangeRate || 1;
-                  return formatEUR(t.amountCurrency === 'EUR' ? t.amount : t.amount / rate);
+                  const grossEUR = t.amountCurrency === 'EUR' ? t.amount : t.amount / rate;
+                  return formatEUR(grossEUR - (t.taxPaid || 0));
                 })() : (() => {
                   const rate = t.exchangeRate || 1;
                   let costEUR = t.priceCurrency === 'EUR'

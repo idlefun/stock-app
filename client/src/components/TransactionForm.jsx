@@ -128,7 +128,8 @@ export default function TransactionForm({ onSubmit }) {
         }
       }
       await api.createTransaction(txn);
-      setForm(INITIAL);
+      const prevType = form.type;
+      setForm({ ...INITIAL, type: prevType });
       setTickerValid(false);
       setTickerName('');
       setManualTicker(false);
