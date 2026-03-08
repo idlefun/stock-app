@@ -111,8 +111,9 @@ function EditRow({ transaction, onSave, onCancel }) {
                 <option value="EUR">EUR</option>
               </select>
             </td>
+            <td>—</td>
             <td>
-              <input type="number" value={form.taxPaid} onChange={e => set('taxPaid', e.target.value)} min="0" step="0.01" size="6" placeholder="Tax EUR" />
+              <input type="number" value={form.taxPaid} onChange={e => set('taxPaid', e.target.value)} min="0" step="0.01" size="6" placeholder="EUR" />
             </td>
           </>
         ) : (
@@ -131,9 +132,11 @@ function EditRow({ transaction, onSave, onCancel }) {
                 <option value="USD">USD</option>
                 <option value="EUR">EUR</option>
               </select>
-              {form.type === 'sell' && (
-                <input type="number" value={form.taxPaid} onChange={e => set('taxPaid', e.target.value)} min="0" step="0.01" size="6" placeholder="Tax EUR" style={{ marginLeft: '4px' }} />
-              )}
+            </td>
+            <td>
+              {form.type === 'sell'
+                ? <input type="number" value={form.taxPaid} onChange={e => set('taxPaid', e.target.value)} min="0" step="0.01" size="6" placeholder="EUR" />
+                : '—'}
             </td>
           </>
         )}
@@ -149,7 +152,7 @@ function EditRow({ transaction, onSave, onCancel }) {
         </td>
       </tr>
       {error && (
-        <tr><td colSpan="10" className="edit-error">{error}</td></tr>
+        <tr><td colSpan="11" className="edit-error">{error}</td></tr>
       )}
     </>
   );
@@ -228,7 +231,8 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
           <th>Ticker</th>
           <th>Qty</th>
           <th>Price</th>
-          <th>Comm / Tax</th>
+          <th>Commission</th>
+          <th>Tax</th>
           <th>EUR/USD Rate</th>
           <th>Total Cost</th>
           <th></th>
@@ -256,14 +260,14 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
                   : (t.priceCurrency === 'USD' ? formatUSD(t.pricePerShare) : formatEUR(t.pricePerShare))}
               </td>
               <td>
-                {t.type === 'dividend'
-                  ? (t.taxPaid > 0 ? `Tax ${formatEUR(t.taxPaid)}` : '—')
-                  : (<>
-                    {t.commission > 0
-                      ? (t.commissionCurrency === 'USD' ? formatUSD(t.commission) : formatEUR(t.commission))
-                      : '—'}
-                    {t.type === 'sell' && t.taxPaid > 0 && <><br /><span className="tax-label">Tax {formatEUR(t.taxPaid)}</span></>}
-                  </>)}
+                {t.type === 'dividend' ? '—'
+                  : (t.commission > 0
+                    ? (t.commissionCurrency === 'USD' ? formatUSD(t.commission) : formatEUR(t.commission))
+                    : '—')}
+              </td>
+              <td>
+                {(t.type === 'dividend' || t.type === 'sell') && t.taxPaid > 0
+                  ? formatEUR(t.taxPaid) : '—'}
               </td>
               <td className="exchange-rate-cell">
                 {hasUSD(t) && t.exchangeRate ? parseFloat(t.exchangeRate.toFixed(7)) : '—'}
