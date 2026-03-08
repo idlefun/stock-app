@@ -72,9 +72,10 @@ export default function CsvImport({ onImport }) {
     setResult(null);
     try {
       const normalized = rows.map(row => {
-        if (row.date && /^\d{2}\/\d{2}\/\d{4}$/.test(row.date)) {
+        if (row.date && /^\d{2}\/\d{2}\/\d{2,4}$/.test(row.date)) {
           const [d, m, y] = row.date.split('/');
-          return { ...row, date: `${y}-${m}-${d}` };
+          const fullYear = y.length === 2 ? (Number(y) > 50 ? `19${y}` : `20${y}`) : y;
+          return { ...row, date: `${fullYear}-${m}-${d}` };
         }
         return row;
       });
