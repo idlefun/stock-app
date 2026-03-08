@@ -142,3 +142,7 @@ th.sortable:hover { background: #eef1f6; }
 .split-badge { background: #ede9fe; color: #5b21b6; font-size: 0.8rem; padding: 4px 10px; border-radius: 6px; font-weight: 500; }
 .split-adjusted { color: #5b21b6; font-weight: 600; }
 .split-mult { font-size: 0.75rem; color: #7c3aed; }
+
+/* Tax page */
+.year-select { padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.95rem; }
+.totals-row td { border-top: 2px solid #e1e5eb; background: #f8f9fb; }
