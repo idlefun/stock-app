@@ -42,6 +42,9 @@ export default function TransactionForm({ onSubmit }) {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     const q = form.ticker.trim();
 
+    // Skip ticker search for sell/dividend — selection handled by dropdown onChange
+    if (form.type === 'sell' || form.type === 'dividend') return;
+
     if (manualTicker) {
       setSearchResults([]);
       setShowDropdown(false);
@@ -80,7 +83,7 @@ export default function TransactionForm({ onSubmit }) {
       }
       setSearching(false);
     }, 400);
-  }, [form.ticker, manualTicker]);
+  }, [form.ticker, form.type, manualTicker]);
 
   function selectTicker(result) {
     set('ticker', result.ticker);
