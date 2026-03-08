@@ -12,14 +12,27 @@ router.get('/', async (req, res) => {
       return res.status(400).json({ error: 'Query parameter "q" is required' });
     }
 
-    const results = await yahooFinance.search(query.trim());
-    const quotes = (results.quotes || [])
-      .filter(q => q.quoteType === 'EQUITY')
-      .map(q => ({
-        ticker: q.symbol,
-        name: q.longname || q.shortname || q.symbol,
-        exchange: q.exchDisp || q.exchange
-      }));
+    const q = query.trim();
+    const searches = [yahooFinance.search(q)];
+    // Also search with .DE suffix for European stocks
+    if (!q.includes('.')) {
+      searches.push(yahooFinance.search(q + '.DE').catch(() => ({ quotes: [] })));
+    }
+    const allResults = await Promise.all(searches);
+    const seen = new Set();
+    const quotes = [];
+    for (const results of allResults) {
+      for (const item of (results.quotes || [])) {
+        if (item.quoteType === 'EQUITY' && !seen.has(item.symbol)) {
+          seen.add(item.symbol);
+          quotes.push({
+            ticker: item.symbol,
+            name: item.longname || item.shortname || item.symbol,
+            exchange: item.exchDisp || item.exchange
+          });
+        }
+      }
+    }
 
     res.json(quotes);
   } catch (err) {
