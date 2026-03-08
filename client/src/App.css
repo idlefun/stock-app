@@ -146,3 +146,16 @@ th.sortable:hover { background: #eef1f6; }
 /* Tax page */
 .year-select { padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.95rem; }
 .totals-row td { border-top: 2px solid #e1e5eb; background: #f8f9fb; }
+
+/* Fund editable cells */
+.editable-cell { cursor: pointer; }
+.editable-cell:hover { background: #f0f4ff; }
+.editable-cell.editing { padding: 4px 8px; }
+.editable-cell.editing input { max-width: 90px; padding: 3px 6px; font-size: 0.8rem; }
+.editable-cell.editing select { max-width: 60px; padding: 3px 4px; font-size: 0.8rem; }
+.missing-price { background: #fef3c7; }
+.missing-price:hover { background: #fde68a; }
+.missing-indicator { color: #92400e; font-size: 0.8rem; font-style: italic; }
+.manual-price { background: #ede9fe; }
+.manual-price:hover { background: #ddd6fe; }
+.manual-indicator { color: #7c3aed; font-size: 0.75rem; }

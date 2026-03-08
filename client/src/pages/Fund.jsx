@@ -34,7 +34,88 @@ function FundChart({ data }) {
   );
 }
 
-function FundTable({ data, startCash }) {
+function EditableCell({ ticker, year, stock, onSave }) {
+  const [editing, setEditing] = useState(false);
+  const [price, setPrice] = useState('');
+  const [currency, setCurrency] = useState('USD');
+  const [saving, setSaving] = useState(false);
+
+  function startEdit() {
+    setPrice(stock.price ?? '');
+    setCurrency(stock.currency || 'USD');
+    setEditing(true);
+  }
+
+  async function handleSave() {
+    if (!price && price !== 0) {
+      // Delete manual price
+      setSaving(true);
+      try {
+        await api.deleteManualPrice(ticker, year);
+        onSave();
+      } catch { /* ignore */ }
+      setSaving(false);
+      setEditing(false);
+      return;
+    }
+    setSaving(true);
+    try {
+      await api.setManualPrice(ticker, year, Number(price), currency);
+      onSave();
+    } catch { /* ignore */ }
+    setSaving(false);
+    setEditing(false);
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === 'Enter') handleSave();
+    if (e.key === 'Escape') setEditing(false);
+  }
+
+  if (editing) {
+    return (
+      <td className="editable-cell editing">
+        <div className="edit-pair">
+          <input
+            type="number"
+            value={price}
+            onChange={e => setPrice(e.target.value)}
+            onKeyDown={handleKeyDown}
+            step="0.01"
+            min="0"
+            size="8"
+            autoFocus
+            disabled={saving}
+          />
+          <select value={currency} onChange={e => setCurrency(e.target.value)} disabled={saving}>
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+          </select>
+        </div>
+        <div style={{ display: 'flex', gap: '4px', marginTop: '2px' }}>
+          <button className="btn-save" onClick={handleSave} disabled={saving} style={{ fontSize: '0.7rem', padding: '2px 6px' }}>OK</button>
+          <button className="btn-cancel" onClick={() => setEditing(false)} style={{ fontSize: '0.7rem', padding: '2px 6px' }}>✕</button>
+        </div>
+      </td>
+    );
+  }
+
+  const isMissing = stock.missing;
+  const isManual = stock.manual;
+
+  return (
+    <td
+      className={`editable-cell ${isMissing ? 'missing-price' : ''} ${isManual ? 'manual-price' : ''}`}
+      onClick={startEdit}
+      title={isMissing ? 'Click to set price' : isManual ? 'Manual price — click to edit' : 'Click to override'}
+    >
+      {isMissing ? <span className="missing-indicator">✎ No price</span> : formatEUR(stock.valueEUR)}
+      {isManual && <span className="manual-indicator"> ✎</span>}
+    </td>
+  );
+}
+
+function FundTable({ data, startCash, onPriceChange }) {
   if (!data || data.snapshots.length === 0) return null;
 
   const allTickers = [...new Set(data.snapshots.flatMap(s => Object.keys(s.stocks)))].sort();
@@ -60,9 +141,19 @@ function FundTable({ data, startCash }) {
             <tr key={s.year}>
               <td><strong>{s.year}</strong></td>
               <td>{formatEUR(s.cash)}</td>
-              {allTickers.map(t => (
-                <td key={t}>{s.stocks[t] ? formatEUR(s.stocks[t].valueEUR) : '—'}</td>
-              ))}
+              {allTickers.map(t => {
+                const stock = s.stocks[t];
+                if (!stock) return <td key={t}>—</td>;
+                return (
+                  <EditableCell
+                    key={t}
+                    ticker={t}
+                    year={s.year}
+                    stock={stock}
+                    onSave={onPriceChange}
+                  />
+                );
+              })}
               <td>{formatEUR(s.stocksTotalEUR)}</td>
               <td><strong>{formatEUR(s.totalEUR)}</strong></td>
               <td className={change >= 0 ? 'positive' : 'negative'}>
@@ -82,7 +173,7 @@ export default function Fund() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
+  function load() {
     setLoading(true);
     Promise.all([
       api.getFundHistory({ startCash: 200000, startYear: 2012, exclude: 'GWRE' }),
@@ -91,7 +182,9 @@ export default function Fund() {
       .then(([main, gwre]) => { setMainFund(main); setGwreFund(gwre); })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
-  }, []);
+  }
+
+  useEffect(() => { load(); }, []);
 
   if (loading) return <p>Loading fund history...</p>;
   if (error) return <p className="error">{error}</p>;
@@ -101,12 +194,12 @@ export default function Fund() {
       <h2>Main Fund</h2>
       <p className="secondary" style={{ marginBottom: '16px' }}>Starting cash: {formatEUR(200000)} (2012) — excludes GWRE</p>
       <FundChart data={mainFund} />
-      <FundTable data={mainFund} startCash={200000} />
+      <FundTable data={mainFund} startCash={200000} onPriceChange={load} />
 
       <h2 style={{ marginTop: '40px' }}>GWRE Fund</h2>
       <p className="secondary" style={{ marginBottom: '16px' }}>Shares received as salary — cash from sales and dividends only</p>
       <FundChart data={gwreFund} />
-      <FundTable data={gwreFund} startCash={0} />
+      <FundTable data={gwreFund} startCash={0} onPriceChange={load} />
     </div>
   );
 }

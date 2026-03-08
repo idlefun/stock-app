@@ -6,6 +6,7 @@ const { fetchRate, loadCache: loadRateCache } = require('./exchangeRate');
 const { getSplits, splitMultiplier, loadCache: loadSplitsCache } = require('./splits');
 const { getPrice, loadCache: loadPriceCache } = require('./prices');
 const { createCache } = require('../lib/cache');
+const { getManualPrices } = require('./manualPrices');
 
 const router = express.Router();
 const histPriceCache = createCache('hist-prices.json', 24 * 60 * 60 * 1000);
@@ -105,13 +106,22 @@ async function computeFundHistory(txns, startCash, startYear, splitsMap, fallbac
       txnIdx++;
     }
 
+    const manualPrices = opts.manualPrices || {};
     const stockValues = {};
     for (const ticker of Object.keys(holdings)) {
       const qty = holdings[ticker].quantity;
       if (qty <= 0) continue;
 
       let priceData;
-      if (year === currentYear) {
+      let manual = false;
+
+      // Check manual prices first
+      const manualKey = `${ticker}_${year}`;
+      if (manualPrices[manualKey]) {
+        const mp = manualPrices[manualKey];
+        priceData = { price: mp.price, currency: mp.currency };
+        manual = true;
+      } else if (year === currentYear) {
         try { priceData = await getPrice(ticker); } catch { priceData = null; }
       } else {
         priceData = await getHistoricalPrice(ticker, yearEnd);
@@ -120,9 +130,9 @@ async function computeFundHistory(txns, startCash, startYear, splitsMap, fallbac
       if (priceData) {
         const valueInCurrency = priceData.price * qty;
         const valueEUR = toEUR(valueInCurrency, priceData.currency, fallbackRate);
-        stockValues[ticker] = { quantity: qty, price: priceData.price, currency: priceData.currency, valueEUR };
+        stockValues[ticker] = { quantity: qty, price: priceData.price, currency: priceData.currency, valueEUR, manual };
       } else {
-        stockValues[ticker] = { quantity: qty, price: null, currency: null, valueEUR: 0 };
+        stockValues[ticker] = { quantity: qty, price: null, currency: null, valueEUR: 0, manual: false, missing: true };
       }
     }
 
@@ -172,7 +182,8 @@ router.get('/', async (req, res) => {
     }
 
     const noCashOnBuy = req.query.noCashOnBuy === 'true';
-    const snapshots = await computeFundHistory(filtered, startCash, startYear, splitsMap, fallbackRate, { noCashOnBuy });
+    const manualPrices = await getManualPrices();
+    const snapshots = await computeFundHistory(filtered, startCash, startYear, splitsMap, fallbackRate, { noCashOnBuy, manualPrices });
 
     res.json({ startCash, startYear, exclude, only, snapshots });
   } catch (err) {

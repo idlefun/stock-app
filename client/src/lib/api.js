@@ -22,6 +22,9 @@ export const api = {
   searchTicker: (q) => request(`/search?q=${encodeURIComponent(q)}`),
   getExchangeRate: () => request('/exchange-rate'),
   getSplits: (ticker) => request(`/splits?ticker=${encodeURIComponent(ticker)}`),
+  getManualPrices: () => request('/manual-prices'),
+  setManualPrice: (ticker, year, price, currency) => request('/manual-prices', { method: 'PUT', body: JSON.stringify({ ticker, year, price, currency }) }),
+  deleteManualPrice: (ticker, year) => request(`/manual-prices/${ticker}/${year}`, { method: 'DELETE' }),
   getTax: (year) => request(`/tax?year=${year}`),
   getFundHistory: (opts = {}) => {
     const params = new URLSearchParams();
