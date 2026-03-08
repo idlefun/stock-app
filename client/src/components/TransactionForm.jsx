@@ -185,7 +185,7 @@ export default function TransactionForm({ onSubmit }) {
               required
             >
               <option value="">Select stock...</option>
-              {holdings.map(h => (
+              {[...holdings].sort((a, b) => a.ticker.localeCompare(b.ticker)).map(h => (
                 <option key={h.ticker} value={h.ticker}>
                   {h.ticker} — {h.name} ({h.quantityHeld} shares)
                 </option>
