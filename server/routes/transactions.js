@@ -192,6 +192,79 @@ router.put('/:id', async (req, res) => {
   }
 });
 
+// POST /api/transactions/import
+router.post('/import', async (req, res) => {
+  try {
+    const { rows } = req.body;
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return res.status(400).json({ error: 'No rows to import' });
+    }
+
+    const transactions = await getTransactions();
+    const imported = [];
+    const errors = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      try {
+        const { type, ticker, date } = row;
+        if (!type || !ticker || !date) {
+          errors.push({ row: i + 1, error: 'Missing type, ticker, or date' });
+          continue;
+        }
+        if (!['buy', 'sell', 'dividend'].includes(type)) {
+          errors.push({ row: i + 1, error: `Invalid type: ${type}` });
+          continue;
+        }
+
+        const txn = {
+          id: crypto.randomUUID(),
+          type,
+          ticker: ticker.toUpperCase(),
+          date,
+          createdAt: new Date().toISOString(),
+        };
+
+        if (type === 'dividend') {
+          if (!row.amount || !row.amountCurrency) {
+            errors.push({ row: i + 1, error: 'Dividend missing amount or amountCurrency' });
+            continue;
+          }
+          txn.amount = Number(row.amount);
+          txn.amountCurrency = row.amountCurrency;
+          txn.taxPaid = Number(row.taxPaid) || 0;
+        } else {
+          if (!row.quantity || !row.pricePerShare || !row.priceCurrency) {
+            errors.push({ row: i + 1, error: 'Missing quantity, pricePerShare, or priceCurrency' });
+            continue;
+          }
+          txn.quantity = Number(row.quantity);
+          txn.pricePerShare = Number(row.pricePerShare);
+          txn.priceCurrency = row.priceCurrency;
+          txn.commission = Number(row.commission) || 0;
+          txn.commissionCurrency = row.commissionCurrency || row.priceCurrency;
+        }
+
+        if (row.exchangeRate) txn.exchangeRate = Number(row.exchangeRate);
+        if (row.companyName) txn.companyName = row.companyName.trim();
+
+        transactions.push(txn);
+        imported.push(txn);
+      } catch (err) {
+        errors.push({ row: i + 1, error: err.message });
+      }
+    }
+
+    if (imported.length > 0) {
+      await saveTransactions(transactions);
+    }
+
+    res.json({ imported: imported.length, errors });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // DELETE /api/transactions/:id
 router.delete('/:id', async (req, res) => {
   try {

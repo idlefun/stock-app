@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
 import TransactionForm from '../components/TransactionForm';
+import CsvImport from '../components/CsvImport';
 import TransactionList from '../components/TransactionList';
 
 export default function Transactions() {
@@ -23,6 +24,7 @@ export default function Transactions() {
   return (
     <div className="transactions-page">
       <TransactionForm onSubmit={load} />
+      <CsvImport onImport={load} />
       <h3>Transaction History</h3>
       {loading ? <p>Loading...</p> : <TransactionList transactions={transactions} onDelete={load} onEdit={load} />}
     </div>
