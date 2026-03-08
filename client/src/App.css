@@ -97,6 +97,12 @@ th.sortable:hover { background: #eef1f6; }
 .edit-error { color: #dc2626; font-size: 0.85rem; padding: 4px 14px; }
 .exchange-rate-cell { font-family: monospace; font-size: 0.85rem; color: #555; }
 
+/* Bulk actions */
+.bulk-actions { display: flex; align-items: center; gap: 12px; padding: 8px 14px; background: #eff6ff; border-radius: 6px; margin-bottom: 8px; font-size: 0.9rem; }
+.btn-delete-bulk { background: #dc2626; color: #fff; border: none; border-radius: 4px; padding: 6px 14px; font-size: 0.85rem; cursor: pointer; font-weight: 600; }
+.btn-delete-bulk:hover { background: #b91c1c; }
+.btn-delete-bulk:disabled { opacity: 0.5; cursor: not-allowed; }
+
 /* Export button */
 .btn-export { background: #1a1a2e; color: #fff; border: none; border-radius: 6px; padding: 6px 14px; font-size: 0.8rem; cursor: pointer; font-weight: 600; }
 .btn-export:hover { background: #2d2d4e; }

@@ -67,6 +67,7 @@ function EditRow({ transaction, onSave, onCancel }) {
   return (
     <>
       <tr className="edit-row">
+        <td></td>
         <td><input type="date" value={form.date} onChange={e => set('date', e.target.value)} /></td>
         <td>
           <select value={form.type} onChange={e => set('type', e.target.value)} disabled>
@@ -121,7 +122,7 @@ function EditRow({ transaction, onSave, onCancel }) {
         </td>
       </tr>
       {error && (
-        <tr><td colSpan="9" className="edit-error">{error}</td></tr>
+        <tr><td colSpan="10" className="edit-error">{error}</td></tr>
       )}
     </>
   );
@@ -129,6 +130,8 @@ function EditRow({ transaction, onSave, onCancel }) {
 
 export default function TransactionList({ transactions, onDelete, onEdit }) {
   const [editingId, setEditingId] = useState(null);
+  const [selected, setSelected] = useState(new Set());
+  const [deleting, setDeleting] = useState(false);
 
   async function handleDelete(id) {
     if (!confirm('Delete this transaction?')) return;
@@ -137,6 +140,38 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
       if (onDelete) onDelete();
     } catch (err) {
       alert(err.message);
+    }
+  }
+
+  async function handleDeleteSelected() {
+    if (selected.size === 0) return;
+    if (!confirm(`Delete ${selected.size} selected transaction(s)?`)) return;
+    setDeleting(true);
+    try {
+      for (const id of selected) {
+        await api.deleteTransaction(id);
+      }
+      setSelected(new Set());
+      if (onDelete) onDelete();
+    } catch (err) {
+      alert(err.message);
+    }
+    setDeleting(false);
+  }
+
+  function toggleSelect(id) {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (selected.size === transactions.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(transactions.map(t => t.id)));
     }
   }
 
@@ -150,9 +185,19 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
   }
 
   return (
-    <table className="transaction-table">
+    <>
+      {selected.size > 0 && (
+        <div className="bulk-actions">
+          <span>{selected.size} selected</span>
+          <button className="btn-delete-bulk" onClick={handleDeleteSelected} disabled={deleting}>
+            {deleting ? 'Deleting...' : `Delete ${selected.size}`}
+          </button>
+        </div>
+      )}
+      <table className="transaction-table">
       <thead>
         <tr>
+          <th><input type="checkbox" checked={selected.size === transactions.length} onChange={toggleSelectAll} /></th>
           <th>Date</th>
           <th>Type</th>
           <th>Ticker</th>
@@ -175,6 +220,7 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
             />
           ) : (
             <tr key={t.id} className={t.type}>
+              <td><input type="checkbox" checked={selected.has(t.id)} onChange={() => toggleSelect(t.id)} /></td>
               <td>{formatDate(t.date)}</td>
               <td className={`type-${t.type}`}>{t.type.toUpperCase()}</td>
               <td>{t.ticker}</td>
