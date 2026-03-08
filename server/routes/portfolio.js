@@ -57,7 +57,8 @@ function calcStockSummary(holding, eurToUsd, splits) {
     } else {
       const avgCost = totalAdjQty > 0 ? totalCostUSD / totalAdjQty : 0;
       const costBasis = avgCost * adjQty;
-      const proceeds = txnValueUSD - txnCommUSD;
+      const sellTaxUSD = convertToUSD(t.taxPaid || 0, 'EUR', eurToUsd);
+      const proceeds = txnValueUSD - txnCommUSD - sellTaxUSD;
       realizedGainUSD += proceeds - costBasis;
       totalCostUSD -= costBasis;
       totalAdjQty -= adjQty;
@@ -302,7 +303,8 @@ router.get('/:ticker', async (req, res) => {
       } else {
         const avgCost = runningAdjQty > 0 ? runningCostUSD / runningAdjQty : 0;
         const costBasis = avgCost * adjQty;
-        const proceeds = txnCostUSD - txnCommUSD;
+        const sellTaxUSD = convertToUSD(t.taxPaid || 0, 'EUR', eurToUsd);
+        const proceeds = txnCostUSD - txnCommUSD - sellTaxUSD;
         const realizedUSD = proceeds - costBasis;
         runningCostUSD -= costBasis;
         runningAdjQty -= adjQty;

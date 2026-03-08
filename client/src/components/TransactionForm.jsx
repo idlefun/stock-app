@@ -100,6 +100,7 @@ export default function TransactionForm({ onSubmit }) {
           quantity: Number(form.quantity),
           pricePerShare: Number(form.pricePerShare),
           commission: Number(form.commission) || 0,
+          taxPaid: form.type === 'sell' ? (Number(form.taxPaid) || 0) : undefined,
           exchangeRate: form.exchangeRate ? Number(form.exchangeRate) : undefined,
         };
         if (!manualTicker || !form.companyName?.trim()) {
@@ -286,6 +287,12 @@ export default function TransactionForm({ onSubmit }) {
                 <option value="EUR">EUR</option>
               </select>
             </label>
+            {form.type === 'sell' && (
+              <label>
+                Tax Paid (EUR)
+                <input type="number" step="0.01" min="0" value={form.taxPaid || ''} onChange={e => set('taxPaid', e.target.value)} placeholder="0.00" />
+              </label>
+            )}
             {(form.priceCurrency === 'USD' || form.commissionCurrency === 'USD') && (
               <label>
                 EUR/USD Rate

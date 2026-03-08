@@ -56,6 +56,7 @@ function EditRow({ transaction, onSave, onCancel }) {
           quantity: Number(form.quantity),
           pricePerShare: Number(form.pricePerShare),
           commission: Number(form.commission) || 0,
+          taxPaid: form.type === 'sell' ? (Number(form.taxPaid) || 0) : undefined,
           exchangeRate: form.exchangeRate !== '' ? Number(form.exchangeRate) : null,
         });
       }
@@ -130,6 +131,9 @@ function EditRow({ transaction, onSave, onCancel }) {
                 <option value="USD">USD</option>
                 <option value="EUR">EUR</option>
               </select>
+              {form.type === 'sell' && (
+                <input type="number" value={form.taxPaid} onChange={e => set('taxPaid', e.target.value)} min="0" step="0.01" size="6" placeholder="Tax EUR" style={{ marginLeft: '4px' }} />
+              )}
             </td>
           </>
         )}
@@ -224,7 +228,7 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
           <th>Ticker</th>
           <th>Qty</th>
           <th>Price</th>
-          <th>Commission</th>
+          <th>Comm / Tax</th>
           <th>EUR/USD Rate</th>
           <th>Total Cost</th>
           <th></th>
@@ -253,10 +257,13 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
               </td>
               <td>
                 {t.type === 'dividend'
-                  ? (t.taxPaid > 0 ? formatEUR(t.taxPaid) : '—')
-                  : (t.commission > 0
-                    ? (t.commissionCurrency === 'USD' ? formatUSD(t.commission) : formatEUR(t.commission))
-                    : '—')}
+                  ? (t.taxPaid > 0 ? `Tax ${formatEUR(t.taxPaid)}` : '—')
+                  : (<>
+                    {t.commission > 0
+                      ? (t.commissionCurrency === 'USD' ? formatUSD(t.commission) : formatEUR(t.commission))
+                      : '—'}
+                    {t.type === 'sell' && t.taxPaid > 0 && <><br /><span className="tax-label">Tax {formatEUR(t.taxPaid)}</span></>}
+                  </>)}
               </td>
               <td className="exchange-rate-cell">
                 {hasUSD(t) && t.exchangeRate ? parseFloat(t.exchangeRate.toFixed(7)) : '—'}

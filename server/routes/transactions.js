@@ -130,6 +130,7 @@ router.post('/', async (req, res) => {
       transaction.priceCurrency = priceCurrency;
       transaction.commission = Number(commission) || 0;
       transaction.commissionCurrency = commissionCurrency || priceCurrency;
+      if (type === 'sell') transaction.taxPaid = Number(taxPaid) || 0;
     }
 
     transactions.push(transaction);
@@ -255,6 +256,7 @@ router.post('/import', async (req, res) => {
           txn.priceCurrency = row.priceCurrency;
           txn.commission = Number(row.commission) || 0;
           txn.commissionCurrency = row.commissionCurrency || row.priceCurrency;
+          if (type === 'sell') txn.taxPaid = Number(row.taxPaid) || 0;
         }
 
         if (row.exchangeRate) txn.exchangeRate = Number(row.exchangeRate);

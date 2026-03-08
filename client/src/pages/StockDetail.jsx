@@ -116,6 +116,7 @@ export default function StockDetail() {
                 {t.commission > 0
                   ? (t.commissionCurrency === 'USD' ? formatUSD(t.commission) : formatEUR(t.commission))
                   : '—'}
+                {t.type === 'sell' && t.taxPaid > 0 && <><br /><span className="tax-label">Tax {formatEUR(t.taxPaid)}</span></>}
               </td>
               <td className="exchange-rate-cell">
                 {(t.priceCurrency === 'USD' || t.commissionCurrency === 'USD') && t.exchangeRate

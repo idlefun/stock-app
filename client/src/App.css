@@ -96,6 +96,7 @@ th.sortable:hover { background: #eef1f6; }
 .btn-cancel:hover { background: #d1d5db; }
 .edit-error { color: #dc2626; font-size: 0.85rem; padding: 4px 14px; }
 .exchange-rate-cell { font-family: monospace; font-size: 0.85rem; color: #555; }
+.tax-label { font-size: 0.8rem; color: #888; }
 
 /* Bulk actions */
 .bulk-actions { display: flex; align-items: center; gap: 12px; padding: 8px 14px; background: #eff6ff; border-radius: 6px; margin-bottom: 8px; font-size: 0.9rem; }
