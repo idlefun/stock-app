@@ -26,6 +26,18 @@ export const api = {
   setManualPrice: (ticker, year, price, currency) => request('/manual-prices', { method: 'PUT', body: JSON.stringify({ ticker, year, price, currency }) }),
   deleteManualPrice: (ticker, year) => request(`/manual-prices/${ticker}/${year}`, { method: 'DELETE' }),
   getTax: (year) => request(`/tax?year=${year}`),
+  downloadBackup: async () => {
+    const res = await fetch(`${API_BASE}/backup`);
+    if (!res.ok) throw new Error('Backup failed');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `stock-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
+  restoreBackup: (data) => request('/backup/restore', { method: 'POST', body: JSON.stringify(data) }),
   getFundHistory: (opts = {}) => {
     const params = new URLSearchParams();
     if (opts.startCash != null) params.set('startCash', opts.startCash);

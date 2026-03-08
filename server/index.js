@@ -6,7 +6,7 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // API routes
 app.use('/api/transactions', require('./routes/transactions'));
@@ -18,6 +18,7 @@ app.use('/api/splits', require('./routes/splits'));
 app.use('/api/tax', require('./routes/tax'));
 app.use('/api/fund-history', require('./routes/fundHistory'));
 app.use('/api/manual-prices', require('./routes/manualPrices'));
+app.use('/api/backup', require('./routes/backup'));
 
 // Serve React frontend in production
 const clientBuildPath = path.join(__dirname, '..', 'client', 'dist');
