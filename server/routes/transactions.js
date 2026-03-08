@@ -63,7 +63,7 @@ router.post('/', async (req, res) => {
         return res.status(400).json({ error: 'Amount must be positive' });
       }
     } else {
-      if (!quantity || !pricePerShare || !priceCurrency) {
+      if (!quantity || pricePerShare == null || pricePerShare === '' || !priceCurrency) {
         return res.status(400).json({ error: 'Missing required fields: quantity, pricePerShare, priceCurrency' });
       }
       if (!['USD', 'EUR'].includes(priceCurrency)) {
@@ -234,7 +234,7 @@ router.post('/import', async (req, res) => {
           txn.amountCurrency = row.amountCurrency;
           txn.taxPaid = Number(row.taxPaid) || 0;
         } else {
-          if (!row.quantity || !row.pricePerShare || !row.priceCurrency) {
+          if (!row.quantity || (row.pricePerShare == null || row.pricePerShare === '') || !row.priceCurrency) {
             errors.push({ row: i + 1, error: 'Missing quantity, pricePerShare, or priceCurrency' });
             continue;
           }
