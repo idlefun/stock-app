@@ -30,15 +30,15 @@ export default function Transactions() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  async function load() {
-    setLoading(true);
+  async function load(showLoading = true) {
+    if (showLoading) setLoading(true);
     try {
       const data = await api.getTransactions();
       setTransactions(data);
     } catch (err) {
       console.error(err);
     }
-    setLoading(false);
+    if (showLoading) setLoading(false);
   }
 
   useEffect(() => { load(); }, []);
@@ -53,7 +53,7 @@ export default function Transactions() {
           <button className="btn-export" onClick={() => exportCSV(transactions)}>Export CSV</button>
         )}
       </div>
-      {loading ? <p>Loading...</p> : <TransactionList transactions={transactions} onDelete={load} onEdit={load} />}
+      {loading ? <p>Loading...</p> : <TransactionList transactions={transactions} onDelete={() => load(false)} onEdit={() => load(false)} />}
     </div>
   );
 }
