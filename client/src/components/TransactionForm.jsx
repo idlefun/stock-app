@@ -237,16 +237,16 @@ export default function TransactionForm({ onSubmit }) {
               </select>
             </div>
           </label>
-          <label>
-            Tax Paid (EUR)
-            <input type="number" step="0.01" min="0" value={form.taxPaid || ''} onChange={e => set('taxPaid', e.target.value)} placeholder="0.00" />
-          </label>
           {(form.amountCurrency || 'USD') === 'USD' && (
             <label>
               EUR/USD Rate
               <input type="number" step="0.0000001" min="0" value={form.exchangeRate || ''} onChange={e => set('exchangeRate', e.target.value)} placeholder="e.g. 1.0870" />
             </label>
           )}
+          <label>
+            Tax Paid (EUR)
+            <input type="number" step="0.01" min="0" value={form.taxPaid || ''} onChange={e => set('taxPaid', e.target.value)} placeholder="0.00" />
+          </label>
           <label className="submit-label">
             &nbsp;
             <button type="submit" disabled={submitting || !tickerValid}>
