@@ -3,6 +3,7 @@ import Dashboard from './pages/Dashboard';
 import Transactions from './pages/Transactions';
 import StockDetail from './pages/StockDetail';
 import Tax from './pages/Tax';
+import Fund from './pages/Fund';
 import './App.css';
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
             <NavLink to="/" end>Dashboard</NavLink>
             <NavLink to="/transactions">Transactions</NavLink>
             <NavLink to="/tax">Tax</NavLink>
+            <NavLink to="/fund">Fund</NavLink>
           </nav>
         </header>
         <main className="app-main">
@@ -23,6 +25,7 @@ function App() {
             <Route path="/transactions" element={<Transactions />} />
             <Route path="/stock/:ticker" element={<StockDetail />} />
             <Route path="/tax" element={<Tax />} />
+            <Route path="/fund" element={<Fund />} />
           </Routes>
         </main>
       </div>

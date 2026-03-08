@@ -23,4 +23,5 @@ export const api = {
   getExchangeRate: () => request('/exchange-rate'),
   getSplits: (ticker) => request(`/splits?ticker=${encodeURIComponent(ticker)}`),
   getTax: (year) => request(`/tax?year=${year}`),
+  getFundHistory: (startCash, startYear) => request(`/fund-history?startCash=${startCash}&startYear=${startYear}`),
 };
