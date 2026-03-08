@@ -321,6 +321,28 @@ router.get('/:ticker', async (req, res) => {
 
     const avgCostPerShare = totalAdjQty > 0 ? totalCostUSD / totalAdjQty : 0;
 
+    // Compute realized, unrealized, dividends, total profit
+    const realizedUSD = detail.reduce((sum, t) => sum + (t.realizedGainLossUSD || 0), 0);
+    const currentValueUSD = currentPrice && totalAdjQty > 0 ? currentPrice * totalAdjQty : null;
+    const unrealizedUSD = currentValueUSD !== null ? currentValueUSD - totalCostUSD : null;
+
+    let dividendsUSD = 0;
+    let taxPaidEUR = 0;
+    const dividendTxns = tickerTxns.filter(t => t.type === 'dividend');
+    for (const d of dividendTxns) {
+      dividendsUSD += convertToUSD(d.amount, d.amountCurrency, eurToUsd);
+      taxPaidEUR += d.taxPaid || 0;
+    }
+    const taxPaidUSD = convertToUSD(taxPaidEUR, 'EUR', eurToUsd);
+    const netDividendsUSD = dividendsUSD - taxPaidUSD;
+
+    const totalInvestedUSD = detail
+      .filter(t => t.type === 'buy')
+      .reduce((sum, t) => sum + convertToUSD(t.pricePerShare * t.quantity, t.priceCurrency, eurToUsd) + convertToUSD(t.commission, t.commissionCurrency, eurToUsd), 0);
+
+    const totalProfitUSD = realizedUSD + (unrealizedUSD || 0) + netDividendsUSD;
+    const pctReturn = totalInvestedUSD > 0 ? (totalProfitUSD / totalInvestedUSD) * 100 : null;
+
     res.json({
       ticker,
       name,
@@ -332,6 +354,15 @@ router.get('/:ticker', async (req, res) => {
       priceStale,
       splits,
       transactions: detail,
+      realizedUSD,
+      realizedEUR: convertToEUR(realizedUSD, 'USD', eurToUsd),
+      unrealizedUSD,
+      unrealizedEUR: unrealizedUSD !== null ? convertToEUR(unrealizedUSD, 'USD', eurToUsd) : null,
+      netDividendsUSD,
+      netDividendsEUR: convertToEUR(netDividendsUSD, 'USD', eurToUsd),
+      totalProfitUSD,
+      totalProfitEUR: convertToEUR(totalProfitUSD, 'USD', eurToUsd),
+      pctReturn,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

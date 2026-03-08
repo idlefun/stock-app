@@ -50,6 +50,14 @@ export default function StockDetail() {
           <span className="value secondary">{formatEUR(detail.currentPriceEUR)}</span>
           {detail.priceStale && <span className="stale-badge">Stale</span>}
         </div>
+        <div className={`summary-card ${detail.totalProfitEUR >= 0 ? 'positive' : 'negative'}`}>
+          <span className="label">Total Profit (incl. dividends)</span>
+          <span className="value">
+            {formatEUR(detail.totalProfitEUR)}
+            {detail.pctReturn != null && ` (${formatPct(detail.pctReturn)})`}
+          </span>
+          <span className="value secondary">{formatUSD(detail.totalProfitUSD)}</span>
+        </div>
       </div>
 
       {hasSplits && (
@@ -77,7 +85,7 @@ export default function StockDetail() {
             {hasSplits && <th>Adjusted Price</th>}
             <th>Commission</th>
             <th>EUR/USD Rate</th>
-            <th>Total Cost</th>
+            <th>Total</th>
             <th>Realized Gain/Loss</th>
           </tr>
         </thead>
