@@ -171,13 +171,28 @@ export default function TransactionForm({ onSubmit }) {
         ) : (
           <label className="ticker-field">
             Ticker
-            <input
-              type="text"
-              value={form.ticker}
-              onChange={e => set('ticker', e.target.value.toUpperCase())}
-              placeholder="e.g. AAPL"
-              required
-            />
+            <div className="ticker-input-row">
+              <input
+                type="text"
+                value={form.ticker}
+                onChange={e => set('ticker', e.target.value.toUpperCase())}
+                placeholder="e.g. AAPL"
+                required
+              />
+              <label className="manual-ticker-toggle">
+                <input
+                  type="checkbox"
+                  checked={manualTicker}
+                  onChange={e => {
+                    setManualTicker(e.target.checked);
+                    setTickerValid(false);
+                    setTickerName('');
+                    clearSearch();
+                  }}
+                />
+                Historical
+              </label>
+            </div>
             {!manualTicker && searching && <span className="ticker-status">Searching...</span>}
             {tickerValid && <span className="ticker-status valid">{tickerName}</span>}
             {!manualTicker && showDropdown && searchResults.length > 0 && (
@@ -189,19 +204,6 @@ export default function TransactionForm({ onSubmit }) {
                 ))}
               </ul>
             )}
-            <label className="manual-ticker-toggle">
-              <input
-                type="checkbox"
-                checked={manualTicker}
-                onChange={e => {
-                  setManualTicker(e.target.checked);
-                  setTickerValid(false);
-                  setTickerName('');
-                  clearSearch();
-                }}
-              />
-              Historical / delisted
-            </label>
           </label>
         )}
 
@@ -254,6 +256,12 @@ export default function TransactionForm({ onSubmit }) {
         </div>
       ) : (
         <div className="form-row">
+          <label>
+            Quantity
+            <input type="number" step="1" min="1"
+              max={form.type === 'sell' ? (holdings.find(h => h.ticker === form.ticker)?.quantityHeld || '') : ''}
+              value={form.quantity} onChange={e => set('quantity', e.target.value)} required />
+          </label>
           <label className="input-pair">
             Price
             <div className="pair-row">
@@ -263,12 +271,6 @@ export default function TransactionForm({ onSubmit }) {
                 <option value="EUR">EUR</option>
               </select>
             </div>
-          </label>
-          <label>
-            Quantity
-            <input type="number" step="1" min="1"
-              max={form.type === 'sell' ? (holdings.find(h => h.ticker === form.ticker)?.quantityHeld || '') : ''}
-              value={form.quantity} onChange={e => set('quantity', e.target.value)} required />
           </label>
           <label className="input-pair">
             Commission

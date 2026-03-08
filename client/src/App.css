@@ -61,13 +61,15 @@ th.sortable:hover { background: #eef1f6; }
 
 /* Ticker autocomplete */
 .ticker-field { position: relative; }
+.ticker-input-row { display: flex; align-items: center; gap: 8px; }
+.ticker-input-row input[type="text"] { flex: 1; }
 .ticker-status { font-size: 0.8rem; font-weight: 400; }
 .ticker-status.valid { color: #16a34a; }
 .ticker-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #d1d5db; border-radius: 6px; list-style: none; max-height: 200px; overflow-y: auto; z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
 .ticker-dropdown li { padding: 8px 12px; cursor: pointer; font-size: 0.85rem; }
 .ticker-dropdown li:hover { background: #f0f4ff; }
 .ticker-dropdown .exchange { color: #888; }
-.manual-ticker-toggle { flex-direction: row !important; align-items: center; gap: 6px !important; font-size: 0.78rem; font-weight: 400; color: #666; cursor: pointer; margin-top: 2px; }
+.manual-ticker-toggle { flex-direction: row !important; align-items: center; gap: 4px !important; font-size: 0.75rem; font-weight: 400; color: #666; cursor: pointer; white-space: nowrap; min-width: auto !important; flex: 0 0 auto !important; }
 .manual-ticker-toggle input { width: auto; margin: 0; cursor: pointer; }
 
 /* Charts */
