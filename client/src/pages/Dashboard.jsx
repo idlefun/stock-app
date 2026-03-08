@@ -28,10 +28,19 @@ export default function Dashboard() {
   if (error) return <p className="error">Error: {error}</p>;
   if (!portfolio) return null;
 
+  const activeStocks = portfolio.stocks.filter(s => s.quantityHeld > 0);
+  const closedStocks = portfolio.stocks.filter(s => s.quantityHeld === 0);
+
   return (
     <div className="dashboard">
       <PortfolioSummary totals={portfolio.totals} exchangeRate={portfolio.exchangeRate} />
-      <HoldingsTable stocks={portfolio.stocks} />
+      <HoldingsTable stocks={activeStocks} />
+      {closedStocks.length > 0 && (
+        <>
+          <h3 style={{ margin: '24px 0 12px' }}>Closed Positions</h3>
+          <HoldingsTable stocks={closedStocks} />
+        </>
+      )}
       <div className="charts-row">
         <PerformanceChart stocks={portfolio.stocks} />
         <AllocationChart stocks={portfolio.stocks} />
