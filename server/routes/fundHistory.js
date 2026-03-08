@@ -153,7 +153,7 @@ async function computeFundHistory(txns, startCash, startYear, splitsMap, fallbac
 // GET /api/fund-history?startCash=200000&startYear=2012&exclude=GWRE
 router.get('/', async (req, res) => {
   try {
-    const startCash = Number(req.query.startCash) || 200000;
+    const startCash = req.query.startCash != null ? Number(req.query.startCash) : 200000;
     const startYear = Number(req.query.startYear) || 2012;
     const exclude = req.query.exclude ? req.query.exclude.split(',').map(t => t.trim().toUpperCase()) : [];
     const only = req.query.only ? req.query.only.split(',').map(t => t.trim().toUpperCase()) : [];
