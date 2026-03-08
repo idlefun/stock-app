@@ -182,7 +182,6 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
   const [editingId, setEditingId] = useState(null);
   const [selected, setSelected] = useState(new Set());
   const [deleting, setDeleting] = useState(false);
-  const [selectedYear, setSelectedYear] = useState(null);
 
   async function handleDelete(id) {
     if (!confirm('Delete this transaction?')) return;
@@ -218,6 +217,14 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
     });
   }
 
+  function toggleSelectAll() {
+    if (selected.size === transactions.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(transactions.map(t => t.id)));
+    }
+  }
+
   function handleSaved() {
     setEditingId(null);
     if (onEdit) onEdit();
@@ -227,30 +234,8 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
     return <p className="empty">No transactions yet.</p>;
   }
 
-  const years = [...new Set(transactions.map(t => t.date.slice(0, 4)))].sort((a, b) => b.localeCompare(a));
-  const activeYear = selectedYear || years[0];
-  const filtered = activeYear === 'all' ? transactions : transactions.filter(t => t.date.startsWith(activeYear));
-
-  function toggleSelectAll() {
-    if (selected.size === filtered.length) {
-      setSelected(new Set());
-    } else {
-      setSelected(new Set(filtered.map(t => t.id)));
-    }
-  }
-
   return (
     <>
-      <div className="year-tabs">
-        {years.map(y => (
-          <button key={y} className={`year-tab ${activeYear === y ? 'active' : ''}`} onClick={() => { setSelectedYear(y); setSelected(new Set()); }}>
-            {y}
-          </button>
-        ))}
-        <button className={`year-tab ${activeYear === 'all' ? 'active' : ''}`} onClick={() => { setSelectedYear('all'); setSelected(new Set()); }}>
-          All
-        </button>
-      </div>
       {selected.size > 0 && (
         <div className="bulk-actions">
           <span>{selected.size} selected</span>
@@ -262,7 +247,7 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
       <table className="transaction-table">
       <thead>
         <tr>
-          <th><input type="checkbox" checked={filtered.length > 0 && selected.size === filtered.length} onChange={toggleSelectAll} /></th>
+          <th><input type="checkbox" checked={selected.size === transactions.length} onChange={toggleSelectAll} /></th>
           <th>Date</th>
           <th>Type</th>
           <th>Ticker</th>
@@ -275,7 +260,7 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
         </tr>
       </thead>
       <tbody>
-        {filtered.map(t =>
+        {transactions.map(t =>
           editingId === t.id ? (
             <EditRow
               key={t.id}
