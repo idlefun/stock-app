@@ -1,33 +1,18 @@
 const express = require('express');
 const YahooFinance = require('yahoo-finance2').default;
 const yahooFinance = new YahooFinance();
-const { readOrDefault, writeJSON } = require('../lib/storage');
+const { createCache } = require('../lib/cache');
 
 const router = express.Router();
-const CACHE_FILE = 'prices.json';
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
-let memoryCache = {};
+const cache = createCache('prices.json', 5 * 60 * 1000);
 
 async function loadCache() {
-  const cached = await readOrDefault(CACHE_FILE, {});
-  memoryCache = cached;
-  return cached;
-}
-
-async function saveCache() {
-  await writeJSON(CACHE_FILE, memoryCache);
-}
-
-function isFresh(entry) {
-  if (!entry || !entry.fetchedAt) return false;
-  return Date.now() - new Date(entry.fetchedAt).getTime() < CACHE_TTL;
+  return cache.load();
 }
 
 async function getPrice(ticker) {
-  if (memoryCache[ticker] && isFresh(memoryCache[ticker])) {
-    return memoryCache[ticker];
-  }
+  const fresh = cache.get(ticker);
+  if (fresh) return fresh;
 
   try {
     const quote = await yahooFinance.quote(ticker);
@@ -35,16 +20,12 @@ async function getPrice(ticker) {
       price: quote.regularMarketPrice,
       currency: quote.currency || 'USD',
       name: quote.longName || quote.shortName || ticker,
-      fetchedAt: new Date().toISOString()
     };
-    memoryCache[ticker] = entry;
-    await saveCache();
-    return entry;
+    await cache.set(ticker, entry);
+    return cache.get(ticker) || entry;
   } catch (err) {
-    // Return stale cache if available
-    if (memoryCache[ticker]) {
-      return { ...memoryCache[ticker], stale: true };
-    }
+    const stale = cache.getStale(ticker);
+    if (stale) return { ...stale, stale: true };
     throw err;
   }
 }

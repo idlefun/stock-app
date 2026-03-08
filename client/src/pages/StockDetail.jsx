@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../lib/api';
-import { formatUSD, formatEUR, formatPct, formatDate } from '../lib/format';
+import { formatUSD, formatEUR, formatPct, formatDate, calcTotalCostEUR } from '../lib/format';
 
 export default function StockDetail() {
   const { ticker } = useParams();
@@ -122,22 +122,7 @@ export default function StockDetail() {
                   ? parseFloat(t.exchangeRate.toFixed(7))
                   : '—'}
               </td>
-              <td>
-                {t.type === 'dividend' ? (() => {
-                  const rate = t.exchangeRate || 1;
-                  const grossEUR = t.amountCurrency === 'EUR' ? t.amount : t.amount / rate;
-                  return formatEUR(grossEUR - (t.taxPaid || 0));
-                })() : (() => {
-                  const rate = t.exchangeRate || 1;
-                  const costEUR = t.priceCurrency === 'EUR'
-                    ? t.pricePerShare * t.quantity
-                    : (t.pricePerShare * t.quantity) / rate;
-                  const commEUR = t.commission > 0
-                    ? (t.commissionCurrency === 'EUR' ? t.commission : t.commission / rate)
-                    : 0;
-                  return formatEUR(costEUR + commEUR);
-                })()}
-              </td>
+              <td>{formatEUR(calcTotalCostEUR(t))}</td>
               <td>
                 {t.realizedGainLossUSD != null ? (
                   <span className={t.realizedGainLossUSD >= 0 ? 'positive' : 'negative'}>

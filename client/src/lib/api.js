@@ -17,6 +17,7 @@ export const api = {
   createTransaction: (txn) => request('/transactions', { method: 'POST', body: JSON.stringify(txn) }),
   updateTransaction: (id, txn) => request(`/transactions/${id}`, { method: 'PUT', body: JSON.stringify(txn) }),
   deleteTransaction: (id) => request(`/transactions/${id}`, { method: 'DELETE' }),
+  deleteTransactionsBulk: (ids) => request('/transactions/bulk', { method: 'DELETE', body: JSON.stringify({ ids }) }),
   importTransactions: (rows) => request('/transactions/import', { method: 'POST', body: JSON.stringify({ rows }) }),
   searchTicker: (q) => request(`/search?q=${encodeURIComponent(q)}`),
   getExchangeRate: () => request('/exchange-rate'),

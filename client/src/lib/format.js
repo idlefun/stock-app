@@ -15,9 +15,21 @@ export function formatPct(value) {
 }
 
 export function formatDate(dateStr) {
-  const d = new Date(dateStr);
-  const day = String(d.getDate()).padStart(2, '0');
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const year = d.getFullYear();
+  const [year, month, day] = dateStr.split('-');
   return `${day}/${month}/${year}`;
+}
+
+export function calcTotalCostEUR(t) {
+  const rate = t.exchangeRate || 1;
+  if (t.type === 'dividend') {
+    const grossEUR = t.amountCurrency === 'EUR' ? t.amount : t.amount / rate;
+    return grossEUR - (t.taxPaid || 0);
+  }
+  const costEUR = t.priceCurrency === 'EUR'
+    ? t.pricePerShare * t.quantity
+    : (t.pricePerShare * t.quantity) / rate;
+  const commEUR = t.commission > 0
+    ? (t.commissionCurrency === 'EUR' ? t.commission : t.commission / rate)
+    : 0;
+  return costEUR + commEUR;
 }

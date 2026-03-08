@@ -1,35 +1,20 @@
 const express = require('express');
 const YahooFinance = require('yahoo-finance2').default;
 const yahooFinance = new YahooFinance();
-const { readOrDefault, writeJSON } = require('../lib/storage');
+const { createCache } = require('../lib/cache');
 
 const router = express.Router();
-const CACHE_FILE = 'splits.json';
-const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
-
-let splitsCache = {};
+const cache = createCache('splits.json', 24 * 60 * 60 * 1000);
 
 async function loadCache() {
-  splitsCache = await readOrDefault(CACHE_FILE, {});
-  return splitsCache;
-}
-
-async function saveCache() {
-  await writeJSON(CACHE_FILE, splitsCache);
-}
-
-function isFresh(entry) {
-  if (!entry || !entry.fetchedAt) return false;
-  return Date.now() - new Date(entry.fetchedAt).getTime() < CACHE_TTL;
+  return cache.load();
 }
 
 async function getSplits(ticker) {
-  if (splitsCache[ticker] && isFresh(splitsCache[ticker])) {
-    return splitsCache[ticker].splits;
-  }
+  const fresh = cache.get(ticker);
+  if (fresh) return fresh.splits;
 
   try {
-    // Use chart() API with events: 'split' to get split history
     const result = await yahooFinance.chart(ticker, {
       period1: '2000-01-01',
       period2: new Date().toISOString().split('T')[0],
@@ -48,16 +33,11 @@ async function getSplits(ticker) {
       .filter(s => Number.isInteger(s.numerator) && Number.isInteger(s.denominator)
         && (s.denominator === 1 || s.numerator === 1));
 
-    splitsCache[ticker] = {
-      splits,
-      fetchedAt: new Date().toISOString(),
-    };
-    await saveCache();
+    await cache.set(ticker, { splits });
     return splits;
   } catch (err) {
-    if (splitsCache[ticker]) {
-      return splitsCache[ticker].splits;
-    }
+    const stale = cache.getStale(ticker);
+    if (stale) return stale.splits;
     throw err;
   }
 }

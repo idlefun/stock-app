@@ -1,49 +1,31 @@
 const express = require('express');
-const { readOrDefault, writeJSON } = require('../lib/storage');
+const { createCache } = require('../lib/cache');
 
 const router = express.Router();
-const CACHE_FILE = 'exchange-rate.json';
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
-let rateCache = null;
+const cache = createCache('exchange-rate.json', 5 * 60 * 1000);
 
 async function loadCache() {
-  rateCache = await readOrDefault(CACHE_FILE, null);
-  return rateCache;
-}
-
-async function saveCache() {
-  await writeJSON(CACHE_FILE, rateCache);
-}
-
-function isFresh() {
-  if (!rateCache || !rateCache.fetchedAt) return false;
-  return Date.now() - new Date(rateCache.fetchedAt).getTime() < CACHE_TTL;
+  return cache.load();
 }
 
 async function fetchRate() {
-  if (rateCache && isFresh()) {
-    return rateCache;
-  }
+  const fresh = cache.get(null);
+  if (fresh) return fresh;
 
   try {
     const response = await fetch('https://api.frankfurter.app/latest?from=EUR&to=USD');
     if (!response.ok) throw new Error(`Exchange rate API returned ${response.status}`);
     const data = await response.json();
 
-    rateCache = {
+    await cache.set(null, {
       rate: data.rates.USD,
       from: 'EUR',
       to: 'USD',
-      fetchedAt: new Date().toISOString()
-    };
-    await saveCache();
-    return rateCache;
+    });
+    return cache.get(null);
   } catch (err) {
-    // Return stale cache if available
-    if (rateCache) {
-      return { ...rateCache, stale: true };
-    }
+    const stale = cache.getStale(null);
+    if (stale) return { ...stale, stale: true };
     throw err;
   }
 }
@@ -55,7 +37,6 @@ async function fetchHistoricalRate(dateStr) {
     const data = await response.json();
     return data.rates.USD;
   } catch (err) {
-    // Fall back to current rate if historical not available
     const current = await fetchRate();
     return current.rate;
   }

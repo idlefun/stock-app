@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { formatUSD, formatEUR, formatDate } from '../lib/format';
+import { formatUSD, formatEUR, formatDate, calcTotalCostEUR } from '../lib/format';
 import { api } from '../lib/api';
+import { useTickerSearch } from '../lib/useTickerSearch';
 
 function hasUSD(t) {
   if (t.type === 'dividend') return t.amountCurrency === 'USD';
@@ -25,42 +26,14 @@ function EditRow({ transaction, onSave, onCancel }) {
   });
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
-  const [searchResults, setSearchResults] = useState([]);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [searching, setSearching] = useState(false);
-  const debounceRef = useRef(null);
+  const { searchResults, showDropdown, searching, selectTicker } = useTickerSearch(form.ticker, !isDividend);
 
   function set(field, value) {
     setForm(prev => ({ ...prev, [field]: value }));
   }
 
-  useEffect(() => {
-    if (isDividend) return;
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    const q = form.ticker.trim();
-    if (q.length < 1) {
-      setSearchResults([]);
-      setShowDropdown(false);
-      return;
-    }
-    debounceRef.current = setTimeout(async () => {
-      setSearching(true);
-      try {
-        const results = await api.searchTicker(q);
-        setSearchResults(results);
-        setShowDropdown(results.length > 0);
-      } catch {
-        setSearchResults([]);
-      }
-      setSearching(false);
-    }, 400);
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [form.ticker]);
-
-  function selectTicker(result) {
-    set('ticker', result.ticker);
-    setShowDropdown(false);
-    setSearchResults([]);
+  function handleSelectTicker(result) {
+    set('ticker', selectTicker(result));
   }
 
   async function handleSave() {
@@ -120,7 +93,7 @@ function EditRow({ transaction, onSave, onCancel }) {
           {!isDividend && showDropdown && searchResults.length > 0 && (
             <ul className="ticker-dropdown">
               {searchResults.map(r => (
-                <li key={r.ticker} onClick={() => selectTicker(r)}>
+                <li key={r.ticker} onClick={() => handleSelectTicker(r)}>
                   <strong>{r.ticker}</strong> — {r.name} <span className="exchange">({r.exchange})</span>
                 </li>
               ))}
@@ -198,9 +171,7 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
     if (!confirm(`Delete ${selected.size} selected transaction(s)?`)) return;
     setDeleting(true);
     try {
-      for (const id of selected) {
-        await api.deleteTransaction(id);
-      }
+      await api.deleteTransactionsBulk([...selected]);
       setSelected(new Set());
       if (onDelete) onDelete();
     } catch (err) {
@@ -290,22 +261,7 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
               <td className="exchange-rate-cell">
                 {hasUSD(t) && t.exchangeRate ? parseFloat(t.exchangeRate.toFixed(7)) : '—'}
               </td>
-              <td>
-                {t.type === 'dividend' ? (() => {
-                  const rate = t.exchangeRate || 1;
-                  const grossEUR = t.amountCurrency === 'EUR' ? t.amount : t.amount / rate;
-                  return formatEUR(grossEUR - (t.taxPaid || 0));
-                })() : (() => {
-                  const rate = t.exchangeRate || 1;
-                  let costEUR = t.priceCurrency === 'EUR'
-                    ? t.pricePerShare * t.quantity
-                    : (t.pricePerShare * t.quantity) / rate;
-                  const commEUR = t.commission > 0
-                    ? (t.commissionCurrency === 'EUR' ? t.commission : t.commission / rate)
-                    : 0;
-                  return formatEUR(costEUR + commEUR);
-                })()}
-              </td>
+              <td>{formatEUR(calcTotalCostEUR(t))}</td>
               <td className="row-actions">
                 <button className="btn-edit" onClick={() => setEditingId(t.id)} title="Edit">✎</button>
                 <button className="btn-delete" onClick={() => handleDelete(t.id)} title="Delete">×</button>

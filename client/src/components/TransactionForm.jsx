@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
+import { useTickerSearch } from '../lib/useTickerSearch';
 
 const INITIAL = {
   type: 'buy',
@@ -14,16 +15,14 @@ const INITIAL = {
 
 export default function TransactionForm({ onSubmit }) {
   const [form, setForm] = useState(INITIAL);
-  const [searchResults, setSearchResults] = useState([]);
   const [tickerValid, setTickerValid] = useState(false);
   const [tickerName, setTickerName] = useState('');
-  const [searching, setSearching] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [manualTicker, setManualTicker] = useState(false);
   const [holdings, setHoldings] = useState([]);
-  const debounceRef = useRef(null);
+  const searchEnabled = form.type !== 'sell' && form.type !== 'dividend' && !manualTicker;
+  const { searchResults, showDropdown, searching, selectTicker: doSelectTicker, clearSearch } = useTickerSearch(form.ticker, searchEnabled);
 
   function set(field, value) {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -38,59 +37,39 @@ export default function TransactionForm({ onSubmit }) {
     }
   }, [form.type]);
 
+  // Validate ticker based on search results
   useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (form.type === 'sell' || form.type === 'dividend') return;
     const q = form.ticker.trim();
 
-    // Skip ticker search for sell/dividend — selection handled by dropdown onChange
-    if (form.type === 'sell' || form.type === 'dividend') return;
-
     if (manualTicker) {
-      setSearchResults([]);
-      setShowDropdown(false);
       setTickerValid(q.length > 0);
       setTickerName(q.length > 0 ? 'Manual entry' : '');
       return;
     }
 
     if (q.length < 1) {
-      setSearchResults([]);
       setTickerValid(false);
       setTickerName('');
-      setShowDropdown(false);
       return;
     }
 
-    setTickerValid(false);
-    setTickerName('');
-    debounceRef.current = setTimeout(async () => {
-      setSearching(true);
-      try {
-        const results = await api.searchTicker(q);
-        setSearchResults(results);
-        if (results.length === 1 && results[0].ticker.toUpperCase() === q.toUpperCase()) {
-          setTickerValid(true);
-          setTickerName(results[0].name);
-          setShowDropdown(false);
-        } else if (results.length > 0) {
-          setShowDropdown(true);
-        } else {
-          setShowDropdown(false);
-          setError(`No stocks found for "${q}"`);
-        }
-      } catch {
-        setSearchResults([]);
-      }
-      setSearching(false);
-    }, 400);
-  }, [form.ticker, form.type, manualTicker]);
+    if (searchResults.length === 1 && searchResults[0].ticker.toUpperCase() === q.toUpperCase()) {
+      setTickerValid(true);
+      setTickerName(searchResults[0].name);
+    } else if (searchResults.length === 0 && !searching) {
+      setTickerValid(false);
+      setTickerName('');
+    } else {
+      setTickerValid(false);
+      setTickerName('');
+    }
+  }, [searchResults, form.ticker, form.type, manualTicker, searching]);
 
   function selectTicker(result) {
-    set('ticker', result.ticker);
+    set('ticker', doSelectTicker(result));
     setTickerValid(true);
     setTickerName(result.name);
-    setShowDropdown(false);
-    setSearchResults([]);
   }
 
   async function handleSubmit(e) {
@@ -151,8 +130,7 @@ export default function TransactionForm({ onSubmit }) {
               setTickerValid(false);
               setTickerName('');
               setManualTicker(false);
-              setShowDropdown(false);
-              setSearchResults([]);
+              clearSearch();
             }
           }}>
             <option value="buy">Buy</option>
@@ -218,8 +196,7 @@ export default function TransactionForm({ onSubmit }) {
                   setManualTicker(e.target.checked);
                   setTickerValid(false);
                   setTickerName('');
-                  setShowDropdown(false);
-                  setSearchResults([]);
+                  clearSearch();
                 }}
               />
               Historical / delisted

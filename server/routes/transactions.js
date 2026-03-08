@@ -1,6 +1,6 @@
 const express = require('express');
 const crypto = require('crypto');
-const { readOrDefault, writeJSON } = require('../lib/storage');
+const { readOrDefault, writeJSON, withLock } = require('../lib/storage');
 const { fetchHistoricalRate } = require('./exchangeRate');
 const { getSplits, splitMultiplier, loadCache: loadSplitsCache } = require('./splits');
 
@@ -45,7 +45,7 @@ router.get('/', async (req, res) => {
 
 // POST /api/transactions
 router.post('/', async (req, res) => {
-  try {
+  await withLock(FILENAME, async () => { try {
     const { type, ticker, quantity, pricePerShare, priceCurrency, commission, commissionCurrency, date, companyName, exchangeRate: userRate, amount, amountCurrency, taxPaid } = req.body;
 
     if (!type || !ticker || !date) {
@@ -137,12 +137,12 @@ router.post('/', async (req, res) => {
     res.status(201).json(transaction);
   } catch (err) {
     res.status(500).json({ error: err.message });
-  }
+  } });
 });
 
 // PUT /api/transactions/:id
 router.put('/:id', async (req, res) => {
-  try {
+  await withLock(FILENAME, async () => { try {
     const transactions = await getTransactions();
     const index = transactions.findIndex(t => t.id === req.params.id);
     if (index === -1) {
@@ -198,16 +198,19 @@ router.put('/:id', async (req, res) => {
     res.json(updated);
   } catch (err) {
     res.status(500).json({ error: err.message });
-  }
+  } });
 });
 
 // POST /api/transactions/import
 router.post('/import', async (req, res) => {
-  try {
-    const { rows } = req.body;
-    if (!Array.isArray(rows) || rows.length === 0) {
-      return res.status(400).json({ error: 'No rows to import' });
-    }
+  const { rows } = req.body;
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return res.status(400).json({ error: 'No rows to import' });
+  }
+  if (rows.length > 1000) {
+    return res.status(400).json({ error: 'Maximum 1000 rows per import' });
+  }
+  await withLock(FILENAME, async () => { try {
 
     const transactions = await getTransactions();
     const imported = [];
@@ -271,12 +274,30 @@ router.post('/import', async (req, res) => {
     res.json({ imported: imported.length, errors });
   } catch (err) {
     res.status(500).json({ error: err.message });
-  }
+  } });
+});
+
+// DELETE /api/transactions/bulk
+router.delete('/bulk', async (req, res) => {
+  await withLock(FILENAME, async () => { try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'No ids provided' });
+    }
+    const transactions = await getTransactions();
+    const idSet = new Set(ids);
+    const remaining = transactions.filter(t => !idSet.has(t.id));
+    const deleted = transactions.length - remaining.length;
+    await saveTransactions(remaining);
+    res.json({ deleted });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  } });
 });
 
 // DELETE /api/transactions/:id
 router.delete('/:id', async (req, res) => {
-  try {
+  await withLock(FILENAME, async () => { try {
     const transactions = await getTransactions();
     const index = transactions.findIndex(t => t.id === req.params.id);
     if (index === -1) {
@@ -287,7 +308,7 @@ router.delete('/:id', async (req, res) => {
     res.json(removed);
   } catch (err) {
     res.status(500).json({ error: err.message });
-  }
+  } });
 });
 
 module.exports = router;

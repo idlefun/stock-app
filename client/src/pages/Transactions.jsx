@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
 import TransactionForm from '../components/TransactionForm';
 import CsvImport from '../components/CsvImport';
@@ -13,8 +13,9 @@ function exportCSV(transactions) {
       const [y, m, d] = val.split('-');
       val = `${d}/${m}/${y}`;
     }
-    const str = String(val);
-    return str.includes(',') ? `"${str}"` : str;
+    let str = String(val);
+    if (/^[=+\-@]/.test(str)) str = "'" + str;
+    return str.includes(',') || str.includes('"') ? `"${str.replace(/"/g, '""')}"` : str;
   }).join(','));
   const csv = [headers.join(','), ...rows].join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
