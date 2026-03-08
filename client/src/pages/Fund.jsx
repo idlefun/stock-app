@@ -3,26 +3,14 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } f
 import { api } from '../lib/api';
 import { formatEUR } from '../lib/format';
 
-const COLORS = [
-  '#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6',
-  '#8b5cf6', '#ef4444', '#14b8a6', '#f97316', '#06b6d4',
-  '#84cc16', '#a855f7', '#e11d48', '#0ea5e9', '#22c55e',
-];
+function FundChart({ data }) {
+  if (!data || data.snapshots.length === 0) return null;
 
-function FundChart({ data, startCash }) {
-  if (!data) return null;
-
-  const allTickers = [...new Set(data.snapshots.flatMap(s => Object.keys(s.stocks)))].sort();
-
-  const chartData = data.snapshots.map(s => {
-    const point = { year: s.year, Cash: s.cash };
-    for (const ticker of allTickers) {
-      point[ticker] = s.stocks[ticker]?.valueEUR || 0;
-    }
-    return point;
-  });
-
-  const stackKeys = ['Cash', ...allTickers];
+  const chartData = data.snapshots.map(s => ({
+    year: s.year,
+    Cash: s.cash,
+    Shares: s.stocksTotalEUR,
+  }));
 
   const formatAxis = (v) => {
     if (Math.abs(v) >= 1000000) return `€${(v / 1000000).toFixed(1)}M`;
@@ -38,17 +26,8 @@ function FundChart({ data, startCash }) {
           <YAxis tickFormatter={formatAxis} width={70} />
           <Tooltip formatter={(v) => formatEUR(v)} />
           <Legend />
-          {stackKeys.map((key, i) => (
-            <Area
-              key={key}
-              type="monotone"
-              dataKey={key}
-              stackId="1"
-              fill={key === 'Cash' ? '#94a3b8' : COLORS[i % COLORS.length]}
-              stroke={key === 'Cash' ? '#64748b' : COLORS[i % COLORS.length]}
-              fillOpacity={0.8}
-            />
-          ))}
+          <Area type="monotone" dataKey="Cash" stackId="1" fill="#94a3b8" stroke="#64748b" fillOpacity={0.8} />
+          <Area type="monotone" dataKey="Shares" stackId="1" fill="#6366f1" stroke="#4f46e5" fillOpacity={0.8} />
         </AreaChart>
       </ResponsiveContainer>
     </div>
@@ -56,7 +35,7 @@ function FundChart({ data, startCash }) {
 }
 
 function FundTable({ data, startCash }) {
-  if (!data) return null;
+  if (!data || data.snapshots.length === 0) return null;
 
   const allTickers = [...new Set(data.snapshots.flatMap(s => Object.keys(s.stocks)))].sort();
 
@@ -67,6 +46,7 @@ function FundTable({ data, startCash }) {
           <th>Year</th>
           <th>Cash</th>
           {allTickers.map(t => <th key={t}>{t}</th>)}
+          <th>Shares</th>
           <th>Total</th>
           <th>Change</th>
         </tr>
@@ -83,9 +63,10 @@ function FundTable({ data, startCash }) {
               {allTickers.map(t => (
                 <td key={t}>{s.stocks[t] ? formatEUR(s.stocks[t].valueEUR) : '—'}</td>
               ))}
+              <td>{formatEUR(s.stocksTotalEUR)}</td>
               <td><strong>{formatEUR(s.totalEUR)}</strong></td>
               <td className={change >= 0 ? 'positive' : 'negative'}>
-                {i === 0 ? '—' : `${change >= 0 ? '+' : ''}${formatEUR(change)} (${changePct >= 0 ? '+' : ''}${changePct.toFixed(1)}%)`}
+                {i === 0 && startCash === 0 ? '—' : `${change >= 0 ? '+' : ''}${formatEUR(change)} (${changePct >= 0 ? '+' : ''}${changePct.toFixed(1)}%)`}
               </td>
             </tr>
           );
@@ -105,7 +86,7 @@ export default function Fund() {
     setLoading(true);
     Promise.all([
       api.getFundHistory({ startCash: 200000, startYear: 2012, exclude: 'GWRE' }),
-      api.getFundHistory({ startCash: 0, startYear: 2012, only: 'GWRE' }),
+      api.getFundHistory({ startCash: 0, startYear: 2012, only: 'GWRE', noCashOnBuy: true }),
     ])
       .then(([main, gwre]) => { setMainFund(main); setGwreFund(gwre); })
       .catch(err => setError(err.message))
@@ -119,12 +100,12 @@ export default function Fund() {
     <div className="fund-page">
       <h2>Main Fund</h2>
       <p className="secondary" style={{ marginBottom: '16px' }}>Starting cash: {formatEUR(200000)} (2012) — excludes GWRE</p>
-      <FundChart data={mainFund} startCash={200000} />
+      <FundChart data={mainFund} />
       <FundTable data={mainFund} startCash={200000} />
 
       <h2 style={{ marginTop: '40px' }}>GWRE Fund</h2>
-      <p className="secondary" style={{ marginBottom: '16px' }}>Separate tracking for Guidewire (GWRE)</p>
-      <FundChart data={gwreFund} startCash={0} />
+      <p className="secondary" style={{ marginBottom: '16px' }}>Shares received as salary — cash from sales and dividends only</p>
+      <FundChart data={gwreFund} />
       <FundTable data={gwreFund} startCash={0} />
     </div>
   );

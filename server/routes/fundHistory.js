@@ -55,7 +55,7 @@ async function getHistoricalPrice(ticker, dateStr) {
   }
 }
 
-async function computeFundHistory(txns, startCash, startYear, splitsMap, fallbackRate) {
+async function computeFundHistory(txns, startCash, startYear, splitsMap, fallbackRate, opts = {}) {
   const currentYear = new Date().getFullYear();
   const years = [];
   for (let y = startYear; y <= currentYear; y++) years.push(y);
@@ -75,9 +75,11 @@ async function computeFundHistory(txns, startCash, startYear, splitsMap, fallbac
       const rate = t.exchangeRate || fallbackRate;
 
       if (t.type === 'buy') {
-        const costEUR = toEUR(t.pricePerShare * t.quantity, t.priceCurrency, rate);
-        const commEUR = t.commission > 0 ? toEUR(t.commission, t.commissionCurrency, rate) : 0;
-        cash -= costEUR + commEUR;
+        if (!opts.noCashOnBuy) {
+          const costEUR = toEUR(t.pricePerShare * t.quantity, t.priceCurrency, rate);
+          const commEUR = t.commission > 0 ? toEUR(t.commission, t.commissionCurrency, rate) : 0;
+          cash -= costEUR + commEUR;
+        }
 
         if (!holdings[t.ticker]) holdings[t.ticker] = { quantity: 0 };
         const splits = splitsMap[t.ticker] || [];
@@ -169,7 +171,8 @@ router.get('/', async (req, res) => {
       try { splitsMap[ticker] = await getSplits(ticker); } catch { splitsMap[ticker] = []; }
     }
 
-    const snapshots = await computeFundHistory(filtered, startCash, startYear, splitsMap, fallbackRate);
+    const noCashOnBuy = req.query.noCashOnBuy === 'true';
+    const snapshots = await computeFundHistory(filtered, startCash, startYear, splitsMap, fallbackRate, { noCashOnBuy });
 
     res.json({ startCash, startYear, exclude, only, snapshots });
   } catch (err) {
