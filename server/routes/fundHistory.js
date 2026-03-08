@@ -164,7 +164,10 @@ router.get('/', async (req, res) => {
     await loadPriceCache();
 
     let fallbackRate;
-    try { fallbackRate = await fetchRate(); } catch { fallbackRate = 1; }
+    try {
+      const rateData = await fetchRate();
+      fallbackRate = rateData?.rate ?? rateData;
+    } catch { fallbackRate = 1; }
 
     let filtered;
     if (only.length > 0) {
