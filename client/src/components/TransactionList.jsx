@@ -168,6 +168,7 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
   const [editingId, setEditingId] = useState(null);
   const [selected, setSelected] = useState(new Set());
   const [deleting, setDeleting] = useState(false);
+  const lastClickedRef = useRef(null);
 
   async function handleDelete(id) {
     if (!confirm('Delete this transaction?')) return;
@@ -193,12 +194,24 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
     setDeleting(false);
   }
 
-  function toggleSelect(id) {
-    setSelected(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
+  function toggleSelect(index, e) {
+    const id = transactions[index].id;
+    if (e.shiftKey && lastClickedRef.current != null) {
+      const from = Math.min(lastClickedRef.current, index);
+      const to = Math.max(lastClickedRef.current, index);
+      setSelected(prev => {
+        const next = new Set(prev);
+        for (let i = from; i <= to; i++) next.add(transactions[i].id);
+        return next;
+      });
+    } else {
+      setSelected(prev => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id); else next.add(id);
+        return next;
+      });
+    }
+    lastClickedRef.current = index;
   }
 
   function toggleSelectAll() {
@@ -245,7 +258,7 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
         </tr>
       </thead>
       <tbody>
-        {transactions.map(t =>
+        {transactions.map((t, idx) =>
           editingId === t.id ? (
             <EditRow
               key={t.id}
@@ -255,7 +268,7 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
             />
           ) : (
             <tr key={t.id} className={t.type}>
-              <td><input type="checkbox" checked={selected.has(t.id)} onChange={() => toggleSelect(t.id)} /></td>
+              <td><input type="checkbox" checked={selected.has(t.id)} onChange={e => toggleSelect(idx, e)} /></td>
               <td>{formatDate(t.date)}</td>
               <td className={`type-${t.type}`}>{t.type.toUpperCase()}</td>
               <td>{t.ticker}</td>
