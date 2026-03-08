@@ -8,14 +8,22 @@ export default function Tax() {
   const [year, setYear] = useState(currentYear);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [years, setYears] = useState([currentYear]);
+
+  useEffect(() => {
+    api.getTransactions().then(txns => {
+      if (txns.length === 0) return;
+      const minYear = Math.min(...txns.map(t => parseInt(t.date.split('-')[0])));
+      const ys = [];
+      for (let y = currentYear; y >= minYear; y--) ys.push(y);
+      setYears(ys);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     setLoading(true);
     api.getTax(year).then(setData).catch(console.error).finally(() => setLoading(false));
   }, [year]);
-
-  const years = [];
-  for (let y = currentYear; y >= 2015; y--) years.push(y);
 
   return (
     <div className="tax-page">
