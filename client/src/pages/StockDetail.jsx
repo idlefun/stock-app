@@ -81,7 +81,7 @@ export default function StockDetail() {
             <th>Type</th>
             <th>Original Qty</th>
             {hasSplits && <th>Adjusted Qty</th>}
-            <th>Original Price</th>
+            <th>Price</th>
             {hasSplits && <th>Adjusted Price</th>}
             <th>Commission</th>
             <th>EUR/USD Rate</th>
