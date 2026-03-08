@@ -265,5 +265,6 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
         )}
       </tbody>
     </table>
+    </>
   );
 }
