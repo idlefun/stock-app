@@ -105,11 +105,13 @@ function EditRow({ transaction, onSave, onCancel }) {
           <>
             <td>—</td>
             <td>
-              <input type="number" value={form.amount} onChange={e => set('amount', e.target.value)} min="0" step="0.01" size="8" />
-              <select value={form.amountCurrency || 'USD'} onChange={e => set('amountCurrency', e.target.value)}>
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-              </select>
+              <div className="edit-pair">
+                <input type="number" value={form.amount} onChange={e => set('amount', e.target.value)} min="0" step="0.01" size="8" />
+                <select value={form.amountCurrency || 'USD'} onChange={e => set('amountCurrency', e.target.value)}>
+                  <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
+                </select>
+              </div>
             </td>
             <td>—</td>
             <td>
@@ -120,18 +122,22 @@ function EditRow({ transaction, onSave, onCancel }) {
           <>
             <td><input type="number" value={form.quantity} onChange={e => set('quantity', e.target.value)} min="1" step="1" size="6" /></td>
             <td>
-              <input type="number" value={form.pricePerShare} onChange={e => set('pricePerShare', e.target.value)} min="0" step="0.01" size="8" />
-              <select value={form.priceCurrency} onChange={e => set('priceCurrency', e.target.value)}>
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-              </select>
+              <div className="edit-pair">
+                <input type="number" value={form.pricePerShare} onChange={e => set('pricePerShare', e.target.value)} min="0" step="0.01" size="8" />
+                <select value={form.priceCurrency} onChange={e => set('priceCurrency', e.target.value)}>
+                  <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
+                </select>
+              </div>
             </td>
             <td>
-              <input type="number" value={form.commission} onChange={e => set('commission', e.target.value)} min="0" step="0.01" size="6" />
-              <select value={form.commissionCurrency} onChange={e => set('commissionCurrency', e.target.value)}>
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-              </select>
+              <div className="edit-pair">
+                <input type="number" value={form.commission} onChange={e => set('commission', e.target.value)} min="0" step="0.01" size="6" />
+                <select value={form.commissionCurrency} onChange={e => set('commissionCurrency', e.target.value)}>
+                  <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
+                </select>
+              </div>
             </td>
             <td>
               {form.type === 'sell'

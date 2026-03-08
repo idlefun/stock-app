@@ -96,6 +96,9 @@ th.sortable:hover { background: #eef1f6; }
 .edit-row input, .edit-row select { padding: 4px 6px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85rem; }
 .edit-row input { max-width: 110px; }
 .edit-row select { max-width: 70px; }
+.edit-row .edit-pair { display: flex; gap: 4px; align-items: center; }
+.edit-row .edit-pair input { flex: 1; min-width: 0; }
+.edit-row .edit-pair select { flex: 0 0 60px; }
 .edit-actions { display: flex; gap: 6px; }
 .btn-save { background: #16a34a; color: #fff; border: none; border-radius: 4px; padding: 4px 10px; font-size: 0.8rem; cursor: pointer; font-weight: 600; }
 .btn-save:hover { background: #15803d; }
