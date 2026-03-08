@@ -77,6 +77,7 @@ export default function StockDetail() {
             {hasSplits && <th>Adjusted Price</th>}
             <th>Commission</th>
             <th>EUR/USD Rate</th>
+            <th>Total Cost</th>
             <th>Realized Gain/Loss</th>
           </tr>
         </thead>
@@ -112,6 +113,22 @@ export default function StockDetail() {
                 {(t.priceCurrency === 'USD' || t.commissionCurrency === 'USD') && t.exchangeRate
                   ? parseFloat(t.exchangeRate.toFixed(7))
                   : '—'}
+              </td>
+              <td>
+                {t.type === 'dividend' ? (() => {
+                  const rate = t.exchangeRate || 1;
+                  const grossEUR = t.amountCurrency === 'EUR' ? t.amount : t.amount / rate;
+                  return formatEUR(grossEUR - (t.taxPaid || 0));
+                })() : (() => {
+                  const rate = t.exchangeRate || 1;
+                  const costEUR = t.priceCurrency === 'EUR'
+                    ? t.pricePerShare * t.quantity
+                    : (t.pricePerShare * t.quantity) / rate;
+                  const commEUR = t.commission > 0
+                    ? (t.commissionCurrency === 'EUR' ? t.commission : t.commission / rate)
+                    : 0;
+                  return formatEUR(costEUR + commEUR);
+                })()}
               </td>
               <td>
                 {t.realizedGainLossUSD != null ? (
