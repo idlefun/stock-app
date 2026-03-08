@@ -40,17 +40,25 @@ export default function Tax() {
             <div className={`summary-card ${data.totals.salesGainEUR >= 0 ? 'positive' : 'negative'}`}>
               <span className="label">Capital Gains</span>
               <span className="value">{formatEUR(data.totals.salesGainEUR)}</span>
+              <span className="secondary">Taxable: {formatEUR(data.expected.taxableGain)}</span>
+              <span className="secondary">(after {formatEUR(data.expected.cgtExemption)} exemption)</span>
             </div>
             <div className="summary-card">
               <span className="label">Dividend Income</span>
               <span className="value">{formatEUR(data.totals.divGrossEUR)}</span>
-              {data.totals.divTaxPaid > 0 && <span className="secondary">Net {formatEUR(data.totals.divNetEUR)}</span>}
+              {data.totals.divTaxPaid > 0 && <span className="secondary">WHT paid {formatEUR(data.totals.divTaxPaid)}</span>}
             </div>
             <div className="summary-card">
-              <span className="label">Total Tax Paid</span>
+              <span className="label">Tax Paid</span>
               <span className="value">{formatEUR(data.totals.totalTaxPaid)}</span>
-              {data.totals.salesTaxPaid > 0 && <span className="secondary">Sales {formatEUR(data.totals.salesTaxPaid)}</span>}
-              {data.totals.divTaxPaid > 0 && <span className="secondary">Dividends {formatEUR(data.totals.divTaxPaid)}</span>}
+              {data.totals.salesTaxPaid > 0 && <span className="secondary">CGT {formatEUR(data.totals.salesTaxPaid)}</span>}
+              {data.totals.divTaxPaid > 0 && <span className="secondary">WHT {formatEUR(data.totals.divTaxPaid)}</span>}
+            </div>
+            <div className="summary-card">
+              <span className="label">Expected Tax Due</span>
+              <span className="value">{formatEUR(data.expected.totalExpected)}</span>
+              <span className="secondary">CGT @ {(data.expected.cgtRate * 100).toFixed(0)}%: {formatEUR(data.expected.cgt)}</span>
+              <span className="secondary">Div @ {(data.expected.dividendTaxRate * 100).toFixed(0)}%: {formatEUR(data.expected.dividendTax)}</span>
             </div>
           </div>
 

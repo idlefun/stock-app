@@ -108,10 +108,31 @@ router.get('/', async (req, res) => {
 
     // Totals
     const totalGainEUR = sales.reduce((s, t) => s + t.gainEUR, 0);
+    const totalLossEUR = sales.filter(s => s.gainEUR < 0).reduce((s, t) => s + t.gainEUR, 0);
     const totalSalesTax = sales.reduce((s, t) => s + t.taxPaid, 0);
     const totalDivGrossEUR = dividends.reduce((s, t) => s + t.grossEUR, 0);
     const totalDivTax = dividends.reduce((s, t) => s + t.taxPaid, 0);
     const totalDivNetEUR = dividends.reduce((s, t) => s + t.netEUR, 0);
+
+    // Irish tax calculations
+    // CGT: 33% on net gains after €1,270 annual exemption. Losses offset gains.
+    const CGT_RATE = 0.33;
+    const CGT_EXEMPTION = 1270;
+    const taxableGain = Math.max(0, totalGainEUR - CGT_EXEMPTION);
+    const expectedCGT = taxableGain * CGT_RATE;
+
+    // Dividends: Irish income tax on foreign dividends
+    // Standard rates: Income tax 20%/40%, USC up to 8%, PRSI 4%
+    // US WHT credit of 15% applies. We compute at higher marginal rate (52%) as default.
+    const DIVIDEND_TAX_RATE = 0.52; // 40% IT + 8% USC + 4% PRSI
+    const US_WHT_RATE = 0.15;
+    let expectedDivTax = 0;
+    for (const d of dividends) {
+      const irishTax = d.grossEUR * DIVIDEND_TAX_RATE;
+      // Credit for WHT already deducted at source (only for USD dividends)
+      const whtCredit = d.taxPaid > 0 ? Math.min(d.taxPaid, d.grossEUR * US_WHT_RATE) : 0;
+      expectedDivTax += Math.max(0, irishTax - whtCredit);
+    }
 
     res.json({
       year,
@@ -119,11 +140,21 @@ router.get('/', async (req, res) => {
       dividends,
       totals: {
         salesGainEUR: totalGainEUR,
+        salesLossEUR: totalLossEUR,
         salesTaxPaid: totalSalesTax,
         divGrossEUR: totalDivGrossEUR,
         divTaxPaid: totalDivTax,
         divNetEUR: totalDivNetEUR,
         totalTaxPaid: totalSalesTax + totalDivTax,
+      },
+      expected: {
+        cgtRate: CGT_RATE,
+        cgtExemption: CGT_EXEMPTION,
+        taxableGain,
+        cgt: expectedCGT,
+        dividendTaxRate: DIVIDEND_TAX_RATE,
+        dividendTax: expectedDivTax,
+        totalExpected: expectedCGT + expectedDivTax,
       },
     });
   } catch (err) {
