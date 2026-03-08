@@ -143,7 +143,7 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Transaction not found' });
     }
 
-    const { type, ticker, quantity, pricePerShare, priceCurrency, commission, commissionCurrency, date, exchangeRate, companyName } = req.body;
+    const { type, ticker, quantity, pricePerShare, priceCurrency, commission, commissionCurrency, date, exchangeRate, companyName, amount, amountCurrency, taxPaid } = req.body;
 
     if (type && !['buy', 'sell', 'dividend'].includes(type)) {
       return res.status(400).json({ error: 'Type must be "buy", "sell", or "dividend"' });
@@ -169,6 +169,9 @@ router.put('/:id', async (req, res) => {
     if (date !== undefined) updated.date = date;
     if (exchangeRate !== undefined) updated.exchangeRate = exchangeRate !== null ? Number(exchangeRate) : null;
     if (companyName !== undefined) updated.companyName = companyName?.trim() || undefined;
+    if (amount !== undefined) updated.amount = Number(amount);
+    if (amountCurrency !== undefined) updated.amountCurrency = amountCurrency;
+    if (taxPaid !== undefined) updated.taxPaid = Number(taxPaid) || 0;
 
     // Sell validation for updated transaction
     if (updated.type === 'sell') {

@@ -8,6 +8,7 @@ function hasUSD(t) {
 }
 
 function EditRow({ transaction, onSave, onCancel }) {
+  const isDividend = transaction.type === 'dividend';
   const [form, setForm] = useState({
     type: transaction.type,
     ticker: transaction.ticker,
@@ -18,6 +19,9 @@ function EditRow({ transaction, onSave, onCancel }) {
     commission: transaction.commission,
     commissionCurrency: transaction.commissionCurrency,
     exchangeRate: transaction.exchangeRate ?? '',
+    amount: transaction.amount,
+    amountCurrency: transaction.amountCurrency,
+    taxPaid: transaction.taxPaid ?? '',
   });
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -30,13 +34,25 @@ function EditRow({ transaction, onSave, onCancel }) {
     setSaving(true);
     setError('');
     try {
-      await api.updateTransaction(transaction.id, {
-        ...form,
-        quantity: Number(form.quantity),
-        pricePerShare: Number(form.pricePerShare),
-        commission: Number(form.commission) || 0,
-        exchangeRate: form.exchangeRate !== '' ? Number(form.exchangeRate) : null,
-      });
+      if (isDividend) {
+        await api.updateTransaction(transaction.id, {
+          type: form.type,
+          ticker: form.ticker,
+          date: form.date,
+          amount: Number(form.amount),
+          amountCurrency: form.amountCurrency,
+          taxPaid: Number(form.taxPaid) || 0,
+          exchangeRate: form.exchangeRate !== '' ? Number(form.exchangeRate) : null,
+        });
+      } else {
+        await api.updateTransaction(transaction.id, {
+          ...form,
+          quantity: Number(form.quantity),
+          pricePerShare: Number(form.pricePerShare),
+          commission: Number(form.commission) || 0,
+          exchangeRate: form.exchangeRate !== '' ? Number(form.exchangeRate) : null,
+        });
+      }
       onSave();
     } catch (err) {
       setError(err.message);
@@ -44,34 +60,55 @@ function EditRow({ transaction, onSave, onCancel }) {
     setSaving(false);
   }
 
-  const showRate = form.priceCurrency === 'USD' || form.commissionCurrency === 'USD';
+  const showRate = isDividend
+    ? (form.amountCurrency || 'USD') === 'USD'
+    : (form.priceCurrency === 'USD' || form.commissionCurrency === 'USD');
 
   return (
     <>
       <tr className="edit-row">
         <td><input type="date" value={form.date} onChange={e => set('date', e.target.value)} /></td>
         <td>
-          <select value={form.type} onChange={e => set('type', e.target.value)}>
+          <select value={form.type} onChange={e => set('type', e.target.value)} disabled>
             <option value="buy">BUY</option>
             <option value="sell">SELL</option>
+            <option value="dividend">DIV</option>
           </select>
         </td>
         <td><input type="text" value={form.ticker} onChange={e => set('ticker', e.target.value.toUpperCase())} size="6" /></td>
-        <td><input type="number" value={form.quantity} onChange={e => set('quantity', e.target.value)} min="1" step="1" size="6" /></td>
-        <td>
-          <input type="number" value={form.pricePerShare} onChange={e => set('pricePerShare', e.target.value)} min="0" step="0.01" size="8" />
-          <select value={form.priceCurrency} onChange={e => set('priceCurrency', e.target.value)}>
-            <option value="USD">USD</option>
-            <option value="EUR">EUR</option>
-          </select>
-        </td>
-        <td>
-          <input type="number" value={form.commission} onChange={e => set('commission', e.target.value)} min="0" step="0.01" size="6" />
-          <select value={form.commissionCurrency} onChange={e => set('commissionCurrency', e.target.value)}>
-            <option value="USD">USD</option>
-            <option value="EUR">EUR</option>
-          </select>
-        </td>
+        {isDividend ? (
+          <>
+            <td>—</td>
+            <td>
+              <input type="number" value={form.amount} onChange={e => set('amount', e.target.value)} min="0" step="0.01" size="8" />
+              <select value={form.amountCurrency || 'USD'} onChange={e => set('amountCurrency', e.target.value)}>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+              </select>
+            </td>
+            <td>
+              <input type="number" value={form.taxPaid} onChange={e => set('taxPaid', e.target.value)} min="0" step="0.01" size="6" placeholder="Tax EUR" />
+            </td>
+          </>
+        ) : (
+          <>
+            <td><input type="number" value={form.quantity} onChange={e => set('quantity', e.target.value)} min="1" step="1" size="6" /></td>
+            <td>
+              <input type="number" value={form.pricePerShare} onChange={e => set('pricePerShare', e.target.value)} min="0" step="0.01" size="8" />
+              <select value={form.priceCurrency} onChange={e => set('priceCurrency', e.target.value)}>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+              </select>
+            </td>
+            <td>
+              <input type="number" value={form.commission} onChange={e => set('commission', e.target.value)} min="0" step="0.01" size="6" />
+              <select value={form.commissionCurrency} onChange={e => set('commissionCurrency', e.target.value)}>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+              </select>
+            </td>
+          </>
+        )}
         <td>
           {showRate ? (
             <input type="number" value={form.exchangeRate} onChange={e => set('exchangeRate', e.target.value)} min="0" step="0.0000001" size="10" placeholder="EUR/USD" />
