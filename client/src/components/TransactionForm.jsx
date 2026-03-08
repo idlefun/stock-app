@@ -141,7 +141,7 @@ export default function TransactionForm({ onSubmit }) {
         </label>
 
         {(form.type === 'sell' || form.type === 'dividend') ? (
-          <label>
+          <label className="ticker-field">
             Ticker
             <select
               value={form.ticker}
