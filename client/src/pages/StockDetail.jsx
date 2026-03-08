@@ -79,7 +79,7 @@ export default function StockDetail() {
           <tr>
             <th>Date</th>
             <th>Type</th>
-            <th>Original Qty</th>
+            <th>Qty</th>
             {hasSplits && <th>Adjusted Qty</th>}
             <th>Price</th>
             {hasSplits && <th>Adjusted Price</th>}
