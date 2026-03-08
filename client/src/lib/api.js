@@ -23,5 +23,12 @@ export const api = {
   getExchangeRate: () => request('/exchange-rate'),
   getSplits: (ticker) => request(`/splits?ticker=${encodeURIComponent(ticker)}`),
   getTax: (year) => request(`/tax?year=${year}`),
-  getFundHistory: (startCash, startYear) => request(`/fund-history?startCash=${startCash}&startYear=${startYear}`),
+  getFundHistory: (opts = {}) => {
+    const params = new URLSearchParams();
+    if (opts.startCash) params.set('startCash', opts.startCash);
+    if (opts.startYear) params.set('startYear', opts.startYear);
+    if (opts.exclude) params.set('exclude', opts.exclude);
+    if (opts.only) params.set('only', opts.only);
+    return request(`/fund-history?${params}`);
+  },
 };
