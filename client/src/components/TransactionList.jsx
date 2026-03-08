@@ -268,7 +268,7 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
             />
           ) : (
             <tr key={t.id} className={t.type}>
-              <td><input type="checkbox" checked={selected.has(t.id)} onChange={e => toggleSelect(idx, e)} /></td>
+              <td><input type="checkbox" checked={selected.has(t.id)} onClick={e => { e.stopPropagation(); toggleSelect(idx, e.nativeEvent); }} readOnly /></td>
               <td>{formatDate(t.date)}</td>
               <td className={`type-${t.type}`}>{t.type.toUpperCase()}</td>
               <td>{t.ticker}</td>
