@@ -93,13 +93,18 @@ function EditRow({ transaction, onSave, onCancel }) {
     setSaving(false);
   }
 
+  const rowRef = useRef(null);
+  useEffect(() => {
+    if (rowRef.current) rowRef.current.scrollIntoView({ block: 'nearest' });
+  }, []);
+
   const showRate = isDividend
     ? (form.amountCurrency || 'USD') === 'USD'
     : (form.priceCurrency === 'USD' || form.commissionCurrency === 'USD');
 
   return (
     <>
-      <tr className="edit-row">
+      <tr className="edit-row" ref={rowRef}>
         <td></td>
         <td><input type="date" value={form.date} onChange={e => set('date', e.target.value)} /></td>
         <td>
