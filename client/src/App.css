@@ -97,6 +97,12 @@ th.sortable:hover { background: #eef1f6; }
 .edit-error { color: #dc2626; font-size: 0.85rem; padding: 4px 14px; }
 .exchange-rate-cell { font-family: monospace; font-size: 0.85rem; color: #555; }
 
+/* Year tabs */
+.year-tabs { display: flex; gap: 4px; margin-bottom: 12px; flex-wrap: wrap; }
+.year-tab { background: #e8ecf1; border: none; border-radius: 6px; padding: 6px 14px; font-size: 0.85rem; cursor: pointer; font-weight: 500; color: #555; }
+.year-tab:hover { background: #d1d5db; }
+.year-tab.active { background: #1a1a2e; color: #fff; }
+
 /* Bulk actions */
 .bulk-actions { display: flex; align-items: center; gap: 12px; padding: 8px 14px; background: #eff6ff; border-radius: 6px; margin-bottom: 8px; font-size: 0.9rem; }
 .btn-delete-bulk { background: #dc2626; color: #fff; border: none; border-radius: 4px; padding: 6px 14px; font-size: 0.85rem; cursor: pointer; font-weight: 600; }
