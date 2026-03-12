@@ -67,6 +67,11 @@ export default function Tax() {
               {data.totals.divTaxPaid > 0 && <span className="secondary">WHT paid {formatEUR(data.totals.divTaxPaid)}</span>}
             </div>
             <div className="summary-card">
+              <span className="label">Expected CGT</span>
+              <span className="value">{formatEUR(data.expected.cgt)}</span>
+              <span className="secondary">@ {(data.expected.cgtRate * 100).toFixed(0)}% on {formatEUR(data.expected.taxableGain)}</span>
+            </div>
+            <div className="summary-card">
               <span className="label">CGT Paid</span>
               {editingTaxPaid ? (
                 <span className="value" style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
@@ -83,13 +88,12 @@ export default function Tax() {
                   {formatEUR(cgtTaxPaid)} ✎
                 </span>
               )}
-              {data.totals.divTaxPaid > 0 && <span className="secondary">WHT {formatEUR(data.totals.divTaxPaid)}</span>}
             </div>
             <div className="summary-card">
-              <span className="label">Expected Tax Due</span>
-              <span className="value">{formatEUR(data.expected.totalExpected)}</span>
-              <span className="secondary">CGT @ {(data.expected.cgtRate * 100).toFixed(0)}%: {formatEUR(data.expected.cgt)}</span>
-              <span className="secondary">Div @ {(data.expected.dividendTaxRate * 100).toFixed(0)}%: {formatEUR(data.expected.dividendTax)}</span>
+              <span className="label">Expected Dividend Tax</span>
+              <span className="value">{formatEUR(data.expected.dividendTax)}</span>
+              <span className="secondary">@ {(data.expected.dividendTaxRate * 100).toFixed(0)}% on {formatEUR(data.totals.divGrossEUR)}</span>
+              {data.totals.divTaxPaid > 0 && <span className="secondary">WHT credit {formatEUR(data.totals.divTaxPaid)}</span>}
             </div>
           </div>
 
