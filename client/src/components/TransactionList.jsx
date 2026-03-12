@@ -253,7 +253,7 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
           <th>Commission</th>
           <th>Tax</th>
           <th>EUR/USD Rate</th>
-          <th>Total Cost</th>
+          <th>Total</th>
           <th></th>
         </tr>
       </thead>
