@@ -61,10 +61,10 @@ th.sortable:hover { background: #eef1f6; }
 .submit-label { justify-content: flex-end; flex: 0 0 auto !important; min-width: auto !important; }
 
 /* Ticker autocomplete */
-.ticker-field { position: relative; flex: 0 1 auto !important; min-width: 120px !important; width: 240px; }
+.ticker-field { position: relative; flex: 0 1 auto !important; min-width: 120px !important; width: 240px; margin-bottom: 18px; }
 .ticker-input-row { display: flex; align-items: center; gap: 6px; }
 .ticker-input-row input[type="text"] { flex: 1; min-width: 0; }
-.ticker-status { font-size: 0.8rem; font-weight: 400; }
+.ticker-status { font-size: 0.8rem; font-weight: 400; position: absolute; bottom: -18px; left: 0; white-space: nowrap; }
 .ticker-status.valid { color: #16a34a; }
 .ticker-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #d1d5db; border-radius: 6px; list-style: none; max-height: 200px; overflow-y: auto; z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
 .ticker-dropdown li { padding: 8px 12px; cursor: pointer; font-size: 0.85rem; }
