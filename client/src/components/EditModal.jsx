@@ -35,7 +35,14 @@ export default function EditModal({ transaction, onSave, onCancel }) {
   useEffect(() => {
     if (form.type === 'sell' || form.type === 'dividend') {
       api.getPortfolio().then(data => {
-        setHoldings(data.stocks.filter(s => s.quantityHeld > 0));
+        const held = data.stocks.filter(s => s.quantityHeld > 0);
+        // Ensure the transaction's ticker is in the list even if holdings are zero
+        if (!held.find(s => s.ticker === transaction.ticker)) {
+          const orig = data.stocks.find(s => s.ticker === transaction.ticker);
+          if (orig) held.push(orig);
+          else held.push({ ticker: transaction.ticker, name: transaction.companyName || transaction.ticker, quantityHeld: 0 });
+        }
+        setHoldings(held);
       }).catch(() => setHoldings([]));
     }
   }, [form.type]);
