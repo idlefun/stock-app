@@ -147,6 +147,7 @@ router.get('/', async (req, res) => {
       let currentPrice = null;
       let priceStale = false;
       const allTxns = [...holding.buys, ...holding.sells, ...holding.dividends];
+      const assetType = allTxns.find(t => t.assetType)?.assetType || 'stock';
       const txnName = allTxns.find(t => t.companyName)?.companyName;
       let name = txnName || ticker;
 
@@ -174,6 +175,7 @@ router.get('/', async (req, res) => {
       const stock = {
         ticker,
         name,
+        assetType,
         quantityHeld: summary.quantityHeld,
         totalCostUSD: summary.totalCostUSD,
         totalCostEUR: summary.totalCostEUR,

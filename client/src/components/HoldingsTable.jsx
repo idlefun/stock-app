@@ -57,6 +57,7 @@ export default function HoldingsTable({ stocks }) {
           <tr key={s.ticker} onClick={() => navigate(`/stock/${s.ticker}`)} className="clickable">
             <td className="ticker">
               {s.ticker}
+              {s.assetType === 'etf' && <span className="etf-badge">ETF</span>}
               {s.splitRatio > 1 && <span className="split-badge">{s.splitRatio}:1</span>}
             </td>
             <td>{s.name}</td>
