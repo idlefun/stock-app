@@ -287,12 +287,23 @@ router.get('/:ticker', async (req, res) => {
     const summary = calcStockSummary(holding, eurToUsd, splits);
 
     // Build per-transaction detail with split info and realized gains
+    // Track costs in EUR using each transaction's own exchange rate
     const detail = [];
     let runningAdjQty = 0;
     let runningCostUSD = 0;
+    let runningCostEUR = 0;
+    let totalRealizedEUR = 0;
+    let totalDividendsEUR = 0;
+
+    const toEUR = (amount, currency, rate) => currency === 'EUR' ? amount : amount / rate;
 
     for (const t of tickerTxns) {
+      const txnRate = t.exchangeRate || eurToUsd;
+
       if (t.type === 'dividend') {
+        const grossEUR = toEUR(t.amount, t.amountCurrency, txnRate);
+        const netEUR = grossEUR - (t.taxPaid || 0);
+        totalDividendsEUR += netEUR;
         detail.push({ ...t, splitMultiplier: 1, adjustedQuantity: 0, adjustedPricePerShare: 0, realizedGainLossUSD: null, realizedGainLossEUR: null });
         continue;
       }
@@ -301,20 +312,28 @@ router.get('/:ticker', async (req, res) => {
       const adjPricePerShare = t.pricePerShare / mult;
       const txnCostUSD = convertToUSD(t.pricePerShare * t.quantity, t.priceCurrency, eurToUsd);
       const txnCommUSD = convertToUSD(t.commission, t.commissionCurrency, eurToUsd);
+      const txnCostEUR = toEUR(t.pricePerShare * t.quantity, t.priceCurrency, txnRate);
+      const txnCommEUR = t.commission > 0 ? toEUR(t.commission, t.commissionCurrency, txnRate) : 0;
 
       if (t.type === 'buy') {
         runningCostUSD += txnCostUSD + txnCommUSD;
+        runningCostEUR += txnCostEUR + txnCommEUR;
         runningAdjQty += adjQty;
         detail.push({ ...t, splitMultiplier: mult, adjustedQuantity: adjQty, adjustedPricePerShare: adjPricePerShare, realizedGainLossUSD: null, realizedGainLossEUR: null });
       } else {
-        const avgCost = runningAdjQty > 0 ? runningCostUSD / runningAdjQty : 0;
-        const costBasis = avgCost * adjQty;
-        const proceeds = txnCostUSD - txnCommUSD;
-        const realizedUSD = proceeds - costBasis;
-        runningCostUSD -= costBasis;
+        const avgCostUSD = runningAdjQty > 0 ? runningCostUSD / runningAdjQty : 0;
+        const avgCostEUR = runningAdjQty > 0 ? runningCostEUR / runningAdjQty : 0;
+        const costBasisUSD = avgCostUSD * adjQty;
+        const costBasisEUR = avgCostEUR * adjQty;
+        const proceedsUSD = txnCostUSD - txnCommUSD;
+        const proceedsEUR = txnCostEUR - txnCommEUR;
+        const realizedUSD = proceedsUSD - costBasisUSD;
+        const realizedEUR = proceedsEUR - costBasisEUR;
+        runningCostUSD -= costBasisUSD;
+        runningCostEUR -= costBasisEUR;
         runningAdjQty -= adjQty;
-        const txnRate = t.exchangeRate || eurToUsd;
-        detail.push({ ...t, splitMultiplier: mult, adjustedQuantity: adjQty, adjustedPricePerShare: adjPricePerShare, realizedGainLossUSD: realizedUSD, realizedGainLossEUR: realizedUSD / txnRate });
+        totalRealizedEUR += realizedEUR;
+        detail.push({ ...t, splitMultiplier: mult, adjustedQuantity: adjQty, adjustedPricePerShare: adjPricePerShare, realizedGainLossUSD: realizedUSD, realizedGainLossEUR: realizedEUR });
       }
     }
 
@@ -393,7 +412,8 @@ router.get('/:ticker', async (req, res) => {
     }
 
     const totalProfitUSD = summary.realizedGainUSD + (unrealizedUSD || 0) + summary.netDividendsUSD;
-    const totalProfitEUR = convertToEUR(totalProfitUSD, 'USD', eurToUsd);
+    const unrealizedEUR = unrealizedUSD !== null ? convertToEUR(unrealizedUSD, 'USD', eurToUsd) : 0;
+    const totalProfitEUR = totalRealizedEUR + unrealizedEUR + totalDividendsEUR;
     const totalProfitAfterTaxEUR = totalProfitEUR - allocatedTaxEUR;
     const pctReturn = summary.totalInvestedUSD > 0 ? (totalProfitUSD / summary.totalInvestedUSD) * 100 : null;
 
