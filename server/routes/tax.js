@@ -39,6 +39,9 @@ router.get('/', async (req, res) => {
       let splits = [];
       try { splits = await getSplits(ticker); } catch { /* no splits */ }
 
+      // Determine asset type from transactions
+      const assetType = txns.find(t => t.assetType)?.assetType || 'stock';
+
       // Process buys and sells in date order using FIFO cost basis
       const buySells = txns.filter(t => t.type === 'buy' || t.type === 'sell')
         .sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -79,6 +82,7 @@ router.get('/', async (req, res) => {
             sales.push({
               id: t.id,
               ticker,
+              assetType,
               date: t.date,
               quantity: t.quantity,
               pricePerShare: t.pricePerShare,
@@ -111,7 +115,19 @@ router.get('/', async (req, res) => {
     sales.sort((a, b) => new Date(a.date) - new Date(b.date));
     dividends.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-    // Totals
+    // Split sales by asset type
+    const stockSales = sales.filter(s => s.assetType !== 'etf');
+    const etfSales = sales.filter(s => s.assetType === 'etf');
+
+    // Stock totals
+    const stockGainEUR = stockSales.reduce((s, t) => s + t.gainEUR, 0);
+    const stockLossEUR = stockSales.filter(s => s.gainEUR < 0).reduce((s, t) => s + t.gainEUR, 0);
+
+    // ETF totals
+    const etfGainEUR = etfSales.reduce((s, t) => s + t.gainEUR, 0);
+    const etfLossEUR = etfSales.filter(s => s.gainEUR < 0).reduce((s, t) => s + t.gainEUR, 0);
+
+    // Combined totals
     const totalGainEUR = sales.reduce((s, t) => s + t.gainEUR, 0);
     const totalLossEUR = sales.filter(s => s.gainEUR < 0).reduce((s, t) => s + t.gainEUR, 0);
     const totalSalesTax = 0; // Now tracked via /api/tax-paid per year
@@ -119,12 +135,18 @@ router.get('/', async (req, res) => {
     const totalDivTax = dividends.reduce((s, t) => s + t.taxPaid, 0);
     const totalDivNetEUR = dividends.reduce((s, t) => s + t.netEUR, 0);
 
-    // Irish tax calculations
+    // Irish tax calculations — Stocks
     // CGT: 33% on net gains after €1,270 annual exemption. Losses offset gains.
     const CGT_RATE = 0.33;
     const CGT_EXEMPTION = 1270;
-    const taxableGain = Math.max(0, totalGainEUR - CGT_EXEMPTION);
-    const expectedCGT = Math.floor(taxableGain * CGT_RATE);
+    const stockTaxableGain = Math.max(0, stockGainEUR - CGT_EXEMPTION);
+    const expectedStockCGT = Math.floor(stockTaxableGain * CGT_RATE);
+
+    // Irish tax calculations — ETFs
+    // Exit tax: 41% on gains, no annual exemption
+    const ETF_TAX_RATE = 0.41;
+    const etfTaxableGain = Math.max(0, etfGainEUR);
+    const expectedETFTax = Math.floor(etfTaxableGain * ETF_TAX_RATE);
 
     // Dividends: Irish income tax on foreign dividends
     // Standard rate: 52% (40% IT + 8% USC + 4% PRSI)
@@ -154,6 +176,10 @@ router.get('/', async (req, res) => {
       totals: {
         salesGainEUR: totalGainEUR,
         salesLossEUR: totalLossEUR,
+        stockGainEUR,
+        stockLossEUR,
+        etfGainEUR,
+        etfLossEUR,
         salesTaxPaid: totalSalesTax,
         divGrossEUR: totalDivGrossEUR,
         divTaxPaid: totalDivTax,
@@ -161,14 +187,23 @@ router.get('/', async (req, res) => {
         totalTaxPaid: totalSalesTax + totalDivTax,
       },
       expected: {
+        // Stocks
         cgtRate: CGT_RATE,
         cgtExemption: CGT_EXEMPTION,
-        taxableGain,
-        cgt: expectedCGT,
+        stockTaxableGain,
+        stockCgt: expectedStockCGT,
+        // ETFs
+        etfTaxRate: ETF_TAX_RATE,
+        etfTaxableGain,
+        etfTax: expectedETFTax,
+        // Combined CGT (backwards compat)
+        taxableGain: stockTaxableGain + etfTaxableGain,
+        cgt: expectedStockCGT + expectedETFTax,
+        // Dividends
         dividendTaxRate: DIVIDEND_TAX_RATE,
         isPenaltyRate,
         dividendTax: expectedDivTax,
-        totalExpected: expectedCGT + expectedDivTax,
+        totalExpected: expectedStockCGT + expectedETFTax + expectedDivTax,
       },
     });
   } catch (err) {

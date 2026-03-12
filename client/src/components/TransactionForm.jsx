@@ -68,6 +68,7 @@ export default function TransactionForm({ onSubmit }) {
 
   function selectTicker(result) {
     set('ticker', doSelectTicker(result));
+    set('assetType', result.quoteType === 'ETF' ? 'etf' : 'stock');
     setTickerValid(true);
     setTickerName(result.name);
   }

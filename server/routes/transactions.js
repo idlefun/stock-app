@@ -46,7 +46,7 @@ router.get('/', async (req, res) => {
 // POST /api/transactions
 router.post('/', async (req, res) => {
   await withLock(FILENAME, async () => { try {
-    const { type, ticker, quantity, pricePerShare, priceCurrency, commission, commissionCurrency, date, companyName, exchangeRate: userRate, dividendAmount, dividendCurrency, taxPaid } = req.body;
+    const { type, ticker, quantity, pricePerShare, priceCurrency, commission, commissionCurrency, date, companyName, exchangeRate: userRate, dividendAmount, dividendCurrency, taxPaid, assetType } = req.body;
 
     if (!type || !ticker || !date) {
       return res.status(400).json({ error: 'Missing required fields: type, ticker, date' });
@@ -110,10 +110,18 @@ router.post('/', async (req, res) => {
       }
     }
 
+    // Resolve assetType: use provided value, or look up from existing transactions
+    let resolvedAssetType = assetType;
+    if (!resolvedAssetType) {
+      const existing = transactions.find(t => t.ticker === ticker.toUpperCase() && t.assetType);
+      if (existing) resolvedAssetType = existing.assetType;
+    }
+
     const transaction = {
       id: crypto.randomUUID(),
       type,
       ticker: ticker.toUpperCase(),
+      assetType: resolvedAssetType || 'stock',
       companyName: companyName?.trim() || undefined,
       date,
       exchangeRate,
@@ -150,7 +158,7 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Transaction not found' });
     }
 
-    const { type, ticker, quantity, pricePerShare, priceCurrency, commission, commissionCurrency, date, exchangeRate, companyName, dividendAmount, dividendCurrency, taxPaid } = req.body;
+    const { type, ticker, quantity, pricePerShare, priceCurrency, commission, commissionCurrency, date, exchangeRate, companyName, dividendAmount, dividendCurrency, taxPaid, assetType } = req.body;
 
     if (type && !['buy', 'sell', 'dividend'].includes(type)) {
       return res.status(400).json({ error: 'Type must be "buy", "sell", or "dividend"' });
@@ -179,6 +187,7 @@ router.put('/:id', async (req, res) => {
     if (dividendAmount !== undefined) updated.dividendAmount = Number(dividendAmount);
     if (dividendCurrency !== undefined) updated.dividendCurrency = dividendCurrency;
     if (taxPaid !== undefined) updated.taxPaid = Number(taxPaid) || 0;
+    if (assetType !== undefined) updated.assetType = assetType;
 
     // Sell validation for updated transaction (split-adjusted)
     if (updated.type === 'sell') {
@@ -261,6 +270,7 @@ router.post('/import', async (req, res) => {
 
         if (row.exchangeRate) txn.exchangeRate = Number(row.exchangeRate);
         if (row.companyName) txn.companyName = row.companyName.trim();
+        if (row.assetType) txn.assetType = row.assetType;
 
         transactions.push(txn);
         imported.push(txn);

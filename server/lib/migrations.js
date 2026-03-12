@@ -1,14 +1,20 @@
 const { readJSON, writeJSON } = require('./storage');
 
 async function runMigrations() {
-  await migrateDividendFields();
-}
-
-// Rename amount -> dividendAmount, amountCurrency -> dividendCurrency
-async function migrateDividendFields() {
   const txns = await readJSON('transactions.json');
   if (!txns || !Array.isArray(txns)) return;
 
+  let changed = false;
+  changed = migrateDividendFields(txns) || changed;
+  changed = await migrateAssetType(txns) || changed;
+
+  if (changed) {
+    await writeJSON('transactions.json', txns);
+  }
+}
+
+// Rename amount -> dividendAmount, amountCurrency -> dividendCurrency
+function migrateDividendFields(txns) {
   let changed = false;
   for (const t of txns) {
     if (t.type === 'dividend') {
@@ -24,11 +30,46 @@ async function migrateDividendFields() {
       }
     }
   }
+  if (changed) console.log('Migration: renamed dividend amount/amountCurrency -> dividendAmount/dividendCurrency');
+  return changed;
+}
 
-  if (changed) {
-    await writeJSON('transactions.json', txns);
-    console.log('Migration: renamed dividend amount/amountCurrency -> dividendAmount/dividendCurrency');
+// Add assetType to transactions missing it, using Yahoo Finance lookup
+async function migrateAssetType(txns) {
+  const tickersMissing = new Set();
+  for (const t of txns) {
+    if (!t.assetType) tickersMissing.add(t.ticker);
   }
+  if (tickersMissing.size === 0) return false;
+
+  // Look up each ticker via Yahoo Finance
+  const YahooFinance = require('yahoo-finance2').default;
+  const yahooFinance = new YahooFinance();
+  const typeMap = {};
+
+  for (const ticker of tickersMissing) {
+    try {
+      const result = await yahooFinance.search(ticker);
+      const match = (result.quotes || []).find(q => q.symbol === ticker);
+      if (match) {
+        typeMap[ticker] = match.quoteType === 'ETF' ? 'etf' : 'stock';
+      } else {
+        typeMap[ticker] = 'stock';
+      }
+    } catch {
+      typeMap[ticker] = 'stock';
+    }
+  }
+
+  let changed = false;
+  for (const t of txns) {
+    if (!t.assetType && typeMap[t.ticker]) {
+      t.assetType = typeMap[t.ticker];
+      changed = true;
+    }
+  }
+  if (changed) console.log('Migration: added assetType to transactions:', Object.entries(typeMap).map(([k, v]) => `${k}=${v}`).join(', '));
+  return changed;
 }
 
 module.exports = { runMigrations };

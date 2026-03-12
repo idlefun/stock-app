@@ -28,7 +28,8 @@ router.get('/', async (req, res) => {
           quotes.push({
             ticker: item.symbol,
             name: item.longname || item.shortname || item.symbol,
-            exchange: item.exchDisp || item.exchange
+            exchange: item.exchDisp || item.exchange,
+            quoteType: item.quoteType,
           });
         }
       }

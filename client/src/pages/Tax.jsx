@@ -4,6 +4,69 @@ import { formatEUR, formatDate } from '../lib/format';
 
 const currentYear = new Date().getFullYear();
 
+function SalesTable({ sales, label, expectedTax, taxPaid }) {
+  if (sales.length === 0) return <p className="empty">No {label.toLowerCase()} sales in this year.</p>;
+
+  const totalGains = sales.filter(s => s.gainEUR > 0).reduce((sum, s) => sum + s.gainEUR, 0);
+  const salesWithTax = sales.map(s => {
+    const allocatedExpected = s.gainEUR > 0 && totalGains > 0
+      ? (s.gainEUR / totalGains) * expectedTax : 0;
+    const allocatedPaid = s.gainEUR > 0 && totalGains > 0
+      ? (s.gainEUR / totalGains) * taxPaid : 0;
+    return { ...s, allocatedExpected, allocatedPaid, netAfterTax: s.gainEUR - allocatedPaid };
+  });
+  const totalAllocatedExpected = salesWithTax.reduce((sum, s) => sum + s.allocatedExpected, 0);
+  const totalAllocatedPaid = salesWithTax.reduce((sum, s) => sum + s.allocatedPaid, 0);
+  const totalNet = salesWithTax.reduce((sum, s) => sum + s.netAfterTax, 0);
+  const totalProceeds = sales.reduce((s, t) => s + t.proceedsEUR, 0);
+  const totalCostBasis = sales.reduce((s, t) => s + t.costBasisEUR, 0);
+  const totalGain = sales.reduce((s, t) => s + t.gainEUR, 0);
+
+  return (
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Ticker</th>
+          <th>Qty</th>
+          <th>Proceeds</th>
+          <th>Cost Basis</th>
+          <th>Gain/Loss</th>
+          <th>Expected Tax</th>
+          <th>Tax Paid</th>
+          <th>Net After Tax</th>
+        </tr>
+      </thead>
+      <tbody>
+        {salesWithTax.map(s => (
+          <tr key={s.id}>
+            <td>{formatDate(s.date)}</td>
+            <td className="ticker">{s.ticker}</td>
+            <td>{s.quantity}</td>
+            <td>{formatEUR(s.proceedsEUR)}</td>
+            <td>{formatEUR(s.costBasisEUR)}</td>
+            <td className={s.gainEUR >= 0 ? 'positive' : 'negative'}>{formatEUR(s.gainEUR)}</td>
+            <td>{s.allocatedExpected > 0 ? formatEUR(s.allocatedExpected) : '—'}</td>
+            <td>{s.allocatedPaid > 0 ? formatEUR(s.allocatedPaid) : '—'}</td>
+            <td className={s.netAfterTax >= 0 ? 'positive' : 'negative'}>{formatEUR(s.netAfterTax)}</td>
+          </tr>
+        ))}
+        <tr className="totals-row">
+          <td colSpan="3"><strong>Total</strong></td>
+          <td><strong>{formatEUR(totalProceeds)}</strong></td>
+          <td><strong>{formatEUR(totalCostBasis)}</strong></td>
+          <td className={totalGain >= 0 ? 'positive' : 'negative'}>
+            <strong>{formatEUR(totalGain)}</strong>
+          </td>
+          <td><strong>{totalAllocatedExpected > 0 ? formatEUR(totalAllocatedExpected) : '—'}</strong></td>
+          <td><strong>{totalAllocatedPaid > 0 ? formatEUR(totalAllocatedPaid) : '—'}</strong></td>
+          <td className={totalNet >= 0 ? 'positive' : 'negative'}><strong>{formatEUR(totalNet)}</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
 export default function Tax() {
   const [year, setYear] = useState(currentYear);
   const [data, setData] = useState(null);
@@ -43,6 +106,9 @@ export default function Tax() {
     setEditingTaxPaid(false);
   }
 
+  const stockSales = data ? data.sales.filter(s => s.assetType !== 'etf') : [];
+  const etfSales = data ? data.sales.filter(s => s.assetType === 'etf') : [];
+
   return (
     <div className="tax-page">
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
@@ -55,24 +121,34 @@ export default function Tax() {
       {loading ? <p>Loading...</p> : !data ? <p>No data.</p> : (
         <>
           <div className="portfolio-summary" style={{ marginBottom: '24px' }}>
-            <div className={`summary-card ${data.totals.salesGainEUR >= 0 ? 'positive' : 'negative'}`}>
-              <span className="label">Capital Gains</span>
-              <span className="value">{formatEUR(data.totals.salesGainEUR)}</span>
-              <span className="secondary">Taxable: {formatEUR(data.expected.taxableGain)}</span>
+            {/* Stock CGT */}
+            <div className={`summary-card ${(data.totals.stockGainEUR || 0) >= 0 ? 'positive' : 'negative'}`}>
+              <span className="label">Stock Capital Gains</span>
+              <span className="value">{formatEUR(data.totals.stockGainEUR)}</span>
+              <span className="secondary">Taxable: {formatEUR(data.expected.stockTaxableGain)}</span>
               <span className="secondary">(after {formatEUR(data.expected.cgtExemption)} exemption)</span>
             </div>
             <div className="summary-card">
-              <span className="label">Dividend Income</span>
-              <span className="value">{formatEUR(data.totals.divGrossEUR)}</span>
-              {data.totals.divTaxPaid > 0 && <span className="secondary">WHT paid {formatEUR(data.totals.divTaxPaid)}</span>}
+              <span className="label">Expected Stock CGT</span>
+              <span className="value">{formatEUR(data.expected.stockCgt)}</span>
+              <span className="secondary">@ {(data.expected.cgtRate * 100).toFixed(0)}% on {formatEUR(data.expected.stockTaxableGain)}</span>
+            </div>
+
+            {/* ETF Exit Tax */}
+            <div className={`summary-card ${(data.totals.etfGainEUR || 0) >= 0 ? 'positive' : 'negative'}`}>
+              <span className="label">ETF Capital Gains</span>
+              <span className="value">{formatEUR(data.totals.etfGainEUR)}</span>
+              <span className="secondary">No exemption</span>
             </div>
             <div className="summary-card">
-              <span className="label">Expected CGT</span>
-              <span className="value">{formatEUR(data.expected.cgt)}</span>
-              <span className="secondary">@ {(data.expected.cgtRate * 100).toFixed(0)}% on {formatEUR(data.expected.taxableGain)}</span>
+              <span className="label">Expected ETF Exit Tax</span>
+              <span className="value">{formatEUR(data.expected.etfTax)}</span>
+              <span className="secondary">@ {(data.expected.etfTaxRate * 100).toFixed(0)}% on {formatEUR(data.expected.etfTaxableGain)}</span>
             </div>
+
+            {/* CGT Paid */}
             <div className="summary-card">
-              <span className="label">CGT Paid</span>
+              <span className="label">Total Tax Paid</span>
               {editingTaxPaid ? (
                 <span className="value" style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                   <input type="number" step="0.01" min="0" value={taxPaidInput}
@@ -88,6 +164,13 @@ export default function Tax() {
                   {formatEUR(cgtTaxPaid)} ✎
                 </span>
               )}
+            </div>
+
+            {/* Dividends */}
+            <div className="summary-card">
+              <span className="label">Dividend Income</span>
+              <span className="value">{formatEUR(data.totals.divGrossEUR)}</span>
+              {data.totals.divTaxPaid > 0 && <span className="secondary">WHT paid {formatEUR(data.totals.divTaxPaid)}</span>}
             </div>
             <div className={`summary-card ${data.expected.isPenaltyRate ? 'penalty' : ''}`}>
               <span className="label">
@@ -105,66 +188,37 @@ export default function Tax() {
             </div>
           </div>
 
-          <h3>Sales ({data.sales.length})</h3>
-          {data.sales.length === 0 ? (
+          {stockSales.length > 0 && (
+            <>
+              <h3>Stock Sales ({stockSales.length})</h3>
+              <SalesTable
+                sales={stockSales}
+                label="Stock"
+                expectedTax={data.expected.stockCgt}
+                taxPaid={cgtTaxPaid > 0 && (data.expected.stockCgt + data.expected.etfTax) > 0
+                  ? cgtTaxPaid * (data.expected.stockCgt / (data.expected.stockCgt + data.expected.etfTax))
+                  : 0}
+              />
+            </>
+          )}
+
+          {etfSales.length > 0 && (
+            <>
+              <h3 style={{ marginTop: '24px' }}>ETF Sales ({etfSales.length})</h3>
+              <SalesTable
+                sales={etfSales}
+                label="ETF"
+                expectedTax={data.expected.etfTax}
+                taxPaid={cgtTaxPaid > 0 && (data.expected.stockCgt + data.expected.etfTax) > 0
+                  ? cgtTaxPaid * (data.expected.etfTax / (data.expected.stockCgt + data.expected.etfTax))
+                  : 0}
+              />
+            </>
+          )}
+
+          {stockSales.length === 0 && etfSales.length === 0 && (
             <p className="empty">No sales in {year}.</p>
-          ) : (() => {
-            const totalGains = data.sales.filter(s => s.gainEUR > 0).reduce((sum, s) => sum + s.gainEUR, 0);
-            const expectedCGT = data.expected.cgt;
-            const salesWithTax = data.sales.map(s => {
-              const allocatedExpected = s.gainEUR > 0 && totalGains > 0
-                ? (s.gainEUR / totalGains) * expectedCGT : 0;
-              const allocatedPaid = s.gainEUR > 0 && totalGains > 0
-                ? (s.gainEUR / totalGains) * cgtTaxPaid : 0;
-              return { ...s, allocatedExpected, allocatedPaid, netAfterTax: s.gainEUR - allocatedPaid };
-            });
-            const totalAllocatedExpected = salesWithTax.reduce((sum, s) => sum + s.allocatedExpected, 0);
-            const totalAllocatedPaid = salesWithTax.reduce((sum, s) => sum + s.allocatedPaid, 0);
-            const totalNet = salesWithTax.reduce((sum, s) => sum + s.netAfterTax, 0);
-            return (
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Ticker</th>
-                  <th>Qty</th>
-                  <th>Proceeds</th>
-                  <th>Cost Basis</th>
-                  <th>Gain/Loss</th>
-                  <th>Expected Tax</th>
-                  <th>Tax Paid</th>
-                  <th>Net After Tax</th>
-                </tr>
-              </thead>
-              <tbody>
-                {salesWithTax.map(s => (
-                  <tr key={s.id}>
-                    <td>{formatDate(s.date)}</td>
-                    <td className="ticker">{s.ticker}</td>
-                    <td>{s.quantity}</td>
-                    <td>{formatEUR(s.proceedsEUR)}</td>
-                    <td>{formatEUR(s.costBasisEUR)}</td>
-                    <td className={s.gainEUR >= 0 ? 'positive' : 'negative'}>{formatEUR(s.gainEUR)}</td>
-                    <td>{s.allocatedExpected > 0 ? formatEUR(s.allocatedExpected) : '—'}</td>
-                    <td>{s.allocatedPaid > 0 ? formatEUR(s.allocatedPaid) : '—'}</td>
-                    <td className={s.netAfterTax >= 0 ? 'positive' : 'negative'}>{formatEUR(s.netAfterTax)}</td>
-                  </tr>
-                ))}
-                <tr className="totals-row">
-                  <td colSpan="3"><strong>Total</strong></td>
-                  <td><strong>{formatEUR(data.sales.reduce((s, t) => s + t.proceedsEUR, 0))}</strong></td>
-                  <td><strong>{formatEUR(data.sales.reduce((s, t) => s + t.costBasisEUR, 0))}</strong></td>
-                  <td className={data.totals.salesGainEUR >= 0 ? 'positive' : 'negative'}>
-                    <strong>{formatEUR(data.totals.salesGainEUR)}</strong>
-                  </td>
-                  <td><strong>{totalAllocatedExpected > 0 ? formatEUR(totalAllocatedExpected) : '—'}</strong></td>
-                  <td><strong>{totalAllocatedPaid > 0 ? formatEUR(totalAllocatedPaid) : '—'}</strong></td>
-                  <td className={totalNet >= 0 ? 'positive' : 'negative'}><strong>{formatEUR(totalNet)}</strong></td>
-                </tr>
-              </tbody>
-            </table>
-            );
-          })()}
+          )}
 
           <h3 style={{ marginTop: '24px' }}>Dividends ({data.dividends.length})</h3>
           {data.dividends.length === 0 ? (
