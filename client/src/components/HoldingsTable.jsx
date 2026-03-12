@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { formatEUR, formatPct } from '../lib/format';
+import { formatUSD, formatEUR, formatPct } from '../lib/format';
 
 const COLUMNS = [
   { key: 'ticker', label: 'Ticker', getValue: s => s.ticker },
   { key: 'name', label: 'Name', getValue: s => s.name },
   { key: 'quantityHeld', label: 'Qty', getValue: s => s.quantityHeld },
-  { key: 'currentPriceEUR', label: 'Price', getValue: s => s.currentPriceEUR ?? 0 },
+  { key: 'currentPrice', label: 'Price', getValue: s => s.currentPrice ?? 0 },
   { key: 'totalInvestedEUR', label: 'Invested', getValue: s => s.totalInvestedEUR ?? 0 },
   { key: 'currentValueEUR', label: 'Holdings Value', getValue: s => s.currentValueEUR ?? 0 },
   { key: 'unrealizedEUR', label: 'Unrealized', getValue: s => s.unrealizedEUR ?? 0 },
@@ -64,9 +64,9 @@ export default function HoldingsTable({ stocks }) {
             <td>{s.name}</td>
             <td>{s.quantityHeld > 0 ? s.quantityHeld : '—'}</td>
             <td>
-              {s.quantityHeld > 0 && s.currentPriceEUR ? (
+              {s.quantityHeld > 0 && s.currentPrice ? (
                 <>
-                  <div>{formatEUR(s.currentPriceEUR)}</div>
+                  <div>{s.priceCurrency === 'USD' ? formatUSD(s.currentPrice) : formatEUR(s.currentPrice)}</div>
                   {s.priceStale && <span className="stale-badge">Stale</span>}
                 </>
               ) : '—'}

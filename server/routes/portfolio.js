@@ -151,9 +151,11 @@ router.get('/', async (req, res) => {
       const txnName = allTxns.find(t => t.companyName)?.companyName;
       let name = txnName || ticker;
 
+      let priceCurrency = 'USD';
       const priceData = priceMap[ticker];
       if (priceData) {
         currentPrice = priceData.price;
+        priceCurrency = priceData.currency || 'USD';
         priceStale = priceData.stale || false;
         name = priceData.name || name;
       } else {
@@ -179,8 +181,9 @@ router.get('/', async (req, res) => {
         quantityHeld: summary.quantityHeld,
         totalCostUSD: summary.totalCostUSD,
         totalCostEUR: summary.totalCostEUR,
-        currentPriceUSD: currentPrice,
-        currentPriceEUR: currentPrice ? convertToEUR(currentPrice, 'USD', eurToUsd) : null,
+        currentPrice,
+        priceCurrency,
+        currentPriceEUR: currentPrice ? convertToEUR(currentPrice, priceCurrency, eurToUsd) : null,
         currentValueUSD,
         currentValueEUR: currentValueUSD !== null ? convertToEUR(currentValueUSD, 'USD', eurToUsd) : null,
         unrealizedUSD,
