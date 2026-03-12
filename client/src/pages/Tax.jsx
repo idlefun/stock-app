@@ -65,7 +65,18 @@ export default function Tax() {
           <h3>Sales ({data.sales.length})</h3>
           {data.sales.length === 0 ? (
             <p className="empty">No sales in {year}.</p>
-          ) : (
+          ) : (() => {
+            const totalGains = data.sales.filter(s => s.gainEUR > 0).reduce((sum, s) => sum + s.gainEUR, 0);
+            const expectedCGT = data.expected.cgt;
+            const salesWithTax = data.sales.map(s => {
+              const allocatedTax = s.gainEUR > 0 && totalGains > 0
+                ? (s.gainEUR / totalGains) * expectedCGT
+                : 0;
+              return { ...s, allocatedTax, netAfterTax: s.gainEUR - allocatedTax };
+            });
+            const totalAllocated = salesWithTax.reduce((sum, s) => sum + s.allocatedTax, 0);
+            const totalNet = salesWithTax.reduce((sum, s) => sum + s.netAfterTax, 0);
+            return (
             <table>
               <thead>
                 <tr>
@@ -74,12 +85,14 @@ export default function Tax() {
                   <th>Qty</th>
                   <th>Proceeds</th>
                   <th>Cost Basis</th>
-                  <th>Net Profit</th>
+                  <th>Gain/Loss</th>
                   <th>Tax Paid</th>
+                  <th>Expected Tax</th>
+                  <th>Net After Tax</th>
                 </tr>
               </thead>
               <tbody>
-                {data.sales.map(s => (
+                {salesWithTax.map(s => (
                   <tr key={s.id}>
                     <td>{formatDate(s.date)}</td>
                     <td className="ticker">{s.ticker}</td>
@@ -88,6 +101,8 @@ export default function Tax() {
                     <td>{formatEUR(s.costBasisEUR)}</td>
                     <td className={s.gainEUR >= 0 ? 'positive' : 'negative'}>{formatEUR(s.gainEUR)}</td>
                     <td>{s.taxPaid > 0 ? formatEUR(s.taxPaid) : '—'}</td>
+                    <td>{s.allocatedTax > 0 ? formatEUR(s.allocatedTax) : '—'}</td>
+                    <td className={s.netAfterTax >= 0 ? 'positive' : 'negative'}>{formatEUR(s.netAfterTax)}</td>
                   </tr>
                 ))}
                 <tr className="totals-row">
@@ -98,10 +113,13 @@ export default function Tax() {
                     <strong>{formatEUR(data.totals.salesGainEUR)}</strong>
                   </td>
                   <td><strong>{data.totals.salesTaxPaid > 0 ? formatEUR(data.totals.salesTaxPaid) : '—'}</strong></td>
+                  <td><strong>{totalAllocated > 0 ? formatEUR(totalAllocated) : '—'}</strong></td>
+                  <td className={totalNet >= 0 ? 'positive' : 'negative'}><strong>{formatEUR(totalNet)}</strong></td>
                 </tr>
               </tbody>
             </table>
-          )}
+            );
+          })()}
 
           <h3 style={{ marginTop: '24px' }}>Dividends ({data.dividends.length})</h3>
           {data.dividends.length === 0 ? (
