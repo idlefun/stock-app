@@ -1,8 +1,15 @@
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
 const { getTransactions } = require('./transactions');
 const { getPrice, loadCache: loadPriceCache } = require('./prices');
 const { fetchRate, loadCache: loadRateCache } = require('./exchangeRate');
 const { getSplits, splitMultiplier, loadCache: loadSplitsCache } = require('./splits');
+
+const taxPaidPath = path.join(__dirname, '..', '..', 'data', 'tax-paid.json');
+function loadTaxPaid() {
+  try { return JSON.parse(fs.readFileSync(taxPaidPath, 'utf8')); } catch { return {}; }
+}
 
 const router = express.Router();
 
@@ -329,7 +336,65 @@ router.get('/:ticker', async (req, res) => {
 
     const currentValueUSD = currentPrice && summary.quantityHeld > 0 ? currentPrice * summary.quantityHeld : null;
     const unrealizedUSD = currentValueUSD !== null ? currentValueUSD - summary.totalCostUSD : null;
+
+    // Calculate allocated CGT for this stock across all years
+    const taxPaidData = loadTaxPaid();
+
+    // Compute per-year gains for ALL stocks using avg cost basis
+    const allTxnsByTicker = {};
+    for (const t of transactions) {
+      if (!allTxnsByTicker[t.ticker]) allTxnsByTicker[t.ticker] = [];
+      allTxnsByTicker[t.ticker].push(t);
+    }
+
+    // For each ticker, compute sell gains by year
+    const gainsByYear = {}; // { year: { ticker: gainEUR } }
+    for (const [tk, txns] of Object.entries(allTxnsByTicker)) {
+      let tkSplits = [];
+      try { tkSplits = await getSplits(tk); } catch {}
+      const buySells = txns.filter(t => t.type === 'buy' || t.type === 'sell')
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+      let qty = 0, costEUR = 0;
+      for (const t of buySells) {
+        const rate = t.exchangeRate || eurToUsd;
+        const mult = splitMultiplier(tkSplits, t.date);
+        const adjQty = t.quantity * mult;
+        const toEUR = (amt, cur) => cur === 'EUR' ? amt : amt / rate;
+        if (t.type === 'buy') {
+          costEUR += toEUR(t.pricePerShare * t.quantity, t.priceCurrency) +
+            (t.commission > 0 ? toEUR(t.commission, t.commissionCurrency) : 0);
+          qty += adjQty;
+        } else {
+          const avg = qty > 0 ? costEUR / qty : 0;
+          const basis = avg * adjQty;
+          const proceeds = toEUR(t.pricePerShare * t.quantity, t.priceCurrency) -
+            (t.commission > 0 ? toEUR(t.commission, t.commissionCurrency) : 0);
+          const gain = proceeds - basis;
+          costEUR -= basis;
+          qty -= adjQty;
+          const yr = t.date.substring(0, 4);
+          if (!gainsByYear[yr]) gainsByYear[yr] = {};
+          gainsByYear[yr][tk] = (gainsByYear[yr][tk] || 0) + gain;
+        }
+      }
+    }
+
+    // Allocate tax paid to this ticker proportionally per year
+    let allocatedTaxEUR = 0;
+    for (const [yr, tickerGains] of Object.entries(gainsByYear)) {
+      const cgtPaid = taxPaidData[yr] || 0;
+      if (cgtPaid <= 0) continue;
+      const totalPositiveGains = Object.values(tickerGains).filter(g => g > 0).reduce((s, g) => s + g, 0);
+      if (totalPositiveGains <= 0) continue;
+      const thisGain = tickerGains[ticker] || 0;
+      if (thisGain > 0) {
+        allocatedTaxEUR += (thisGain / totalPositiveGains) * cgtPaid;
+      }
+    }
+
     const totalProfitUSD = summary.realizedGainUSD + (unrealizedUSD || 0) + summary.netDividendsUSD;
+    const totalProfitEUR = convertToEUR(totalProfitUSD, 'USD', eurToUsd);
+    const totalProfitAfterTaxEUR = totalProfitEUR - allocatedTaxEUR;
     const pctReturn = summary.totalInvestedUSD > 0 ? (totalProfitUSD / summary.totalInvestedUSD) * 100 : null;
 
     // Filter splits for closed positions
@@ -358,7 +423,9 @@ router.get('/:ticker', async (req, res) => {
       netDividendsUSD: summary.netDividendsUSD,
       netDividendsEUR: summary.netDividendsEUR,
       totalProfitUSD,
-      totalProfitEUR: convertToEUR(totalProfitUSD, 'USD', eurToUsd),
+      totalProfitEUR,
+      allocatedTaxEUR,
+      totalProfitAfterTaxEUR,
       pctReturn,
     });
   } catch (err) {

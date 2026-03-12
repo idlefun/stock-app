@@ -64,6 +64,13 @@ export default function StockDetail() {
           </span>
           <span className="value secondary">{formatUSD(detail.totalProfitUSD)}</span>
         </div>
+        {detail.allocatedTaxEUR > 0 && (
+          <div className={`summary-card ${detail.totalProfitAfterTaxEUR >= 0 ? 'positive' : 'negative'}`}>
+            <span className="label">Profit After Tax</span>
+            <span className="value">{formatEUR(detail.totalProfitAfterTaxEUR)}</span>
+            <span className="value secondary">CGT allocated: {formatEUR(detail.allocatedTaxEUR)}</span>
+          </div>
+        )}
       </div>
 
       {hasSplits && (
