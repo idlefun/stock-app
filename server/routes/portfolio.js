@@ -308,7 +308,8 @@ router.get('/:ticker', async (req, res) => {
         const realizedUSD = proceeds - costBasis;
         runningCostUSD -= costBasis;
         runningAdjQty -= adjQty;
-        detail.push({ ...t, splitMultiplier: mult, adjustedQuantity: adjQty, adjustedPricePerShare: adjPricePerShare, realizedGainLossUSD: realizedUSD, realizedGainLossEUR: convertToEUR(realizedUSD, 'USD', eurToUsd) });
+        const txnRate = t.exchangeRate || eurToUsd;
+        detail.push({ ...t, splitMultiplier: mult, adjustedQuantity: adjQty, adjustedPricePerShare: adjPricePerShare, realizedGainLossUSD: realizedUSD, realizedGainLossEUR: realizedUSD / txnRate });
       }
     }
 
