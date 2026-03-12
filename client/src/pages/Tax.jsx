@@ -9,6 +9,9 @@ export default function Tax() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [years, setYears] = useState([currentYear]);
+  const [taxPaidByYear, setTaxPaidByYear] = useState({});
+  const [editingTaxPaid, setEditingTaxPaid] = useState(false);
+  const [taxPaidInput, setTaxPaidInput] = useState('');
 
   useEffect(() => {
     api.getTransactions().then(txns => {
@@ -18,12 +21,27 @@ export default function Tax() {
       for (let y = currentYear; y >= minYear; y--) ys.push(y);
       setYears(ys);
     }).catch(() => {});
+    api.getTaxPaid().then(setTaxPaidByYear).catch(() => {});
   }, []);
 
   useEffect(() => {
     setLoading(true);
     api.getTax(year).then(setData).catch(console.error).finally(() => setLoading(false));
   }, [year]);
+
+  const cgtTaxPaid = taxPaidByYear[year] || 0;
+
+  function startEditTaxPaid() {
+    setTaxPaidInput(cgtTaxPaid || '');
+    setEditingTaxPaid(true);
+  }
+
+  async function saveTaxPaid() {
+    const amount = Number(taxPaidInput) || 0;
+    const updated = await api.setTaxPaid(year, amount);
+    setTaxPaidByYear(updated);
+    setEditingTaxPaid(false);
+  }
 
   return (
     <div className="tax-page">
@@ -49,9 +67,22 @@ export default function Tax() {
               {data.totals.divTaxPaid > 0 && <span className="secondary">WHT paid {formatEUR(data.totals.divTaxPaid)}</span>}
             </div>
             <div className="summary-card">
-              <span className="label">Tax Paid</span>
-              <span className="value">{formatEUR(data.totals.totalTaxPaid)}</span>
-              {data.totals.salesTaxPaid > 0 && <span className="secondary">CGT {formatEUR(data.totals.salesTaxPaid)}</span>}
+              <span className="label">CGT Paid</span>
+              {editingTaxPaid ? (
+                <span className="value" style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                  <input type="number" step="0.01" min="0" value={taxPaidInput}
+                    onChange={e => setTaxPaidInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') saveTaxPaid(); if (e.key === 'Escape') setEditingTaxPaid(false); }}
+                    style={{ width: '120px', fontSize: '1rem', padding: '4px 8px' }}
+                    autoFocus
+                  />
+                  <button onClick={saveTaxPaid} style={{ fontSize: '0.8rem', padding: '4px 8px' }}>Save</button>
+                </span>
+              ) : (
+                <span className="value" style={{ cursor: 'pointer' }} onClick={startEditTaxPaid} title="Click to edit">
+                  {formatEUR(cgtTaxPaid)} ✎
+                </span>
+              )}
               {data.totals.divTaxPaid > 0 && <span className="secondary">WHT {formatEUR(data.totals.divTaxPaid)}</span>}
             </div>
             <div className="summary-card">
@@ -69,12 +100,14 @@ export default function Tax() {
             const totalGains = data.sales.filter(s => s.gainEUR > 0).reduce((sum, s) => sum + s.gainEUR, 0);
             const expectedCGT = data.expected.cgt;
             const salesWithTax = data.sales.map(s => {
-              const allocatedTax = s.gainEUR > 0 && totalGains > 0
-                ? (s.gainEUR / totalGains) * expectedCGT
-                : 0;
-              return { ...s, allocatedTax, netAfterTax: s.gainEUR - allocatedTax };
+              const allocatedExpected = s.gainEUR > 0 && totalGains > 0
+                ? (s.gainEUR / totalGains) * expectedCGT : 0;
+              const allocatedPaid = s.gainEUR > 0 && totalGains > 0
+                ? (s.gainEUR / totalGains) * cgtTaxPaid : 0;
+              return { ...s, allocatedExpected, allocatedPaid, netAfterTax: s.gainEUR - allocatedPaid };
             });
-            const totalAllocated = salesWithTax.reduce((sum, s) => sum + s.allocatedTax, 0);
+            const totalAllocatedExpected = salesWithTax.reduce((sum, s) => sum + s.allocatedExpected, 0);
+            const totalAllocatedPaid = salesWithTax.reduce((sum, s) => sum + s.allocatedPaid, 0);
             const totalNet = salesWithTax.reduce((sum, s) => sum + s.netAfterTax, 0);
             return (
             <table>
@@ -86,8 +119,8 @@ export default function Tax() {
                   <th>Proceeds</th>
                   <th>Cost Basis</th>
                   <th>Gain/Loss</th>
-                  <th>Tax Paid</th>
                   <th>Expected Tax</th>
+                  <th>Tax Paid</th>
                   <th>Net After Tax</th>
                 </tr>
               </thead>
@@ -100,8 +133,8 @@ export default function Tax() {
                     <td>{formatEUR(s.proceedsEUR)}</td>
                     <td>{formatEUR(s.costBasisEUR)}</td>
                     <td className={s.gainEUR >= 0 ? 'positive' : 'negative'}>{formatEUR(s.gainEUR)}</td>
-                    <td>{s.taxPaid > 0 ? formatEUR(s.taxPaid) : '—'}</td>
-                    <td>{s.allocatedTax > 0 ? formatEUR(s.allocatedTax) : '—'}</td>
+                    <td>{s.allocatedExpected > 0 ? formatEUR(s.allocatedExpected) : '—'}</td>
+                    <td>{s.allocatedPaid > 0 ? formatEUR(s.allocatedPaid) : '—'}</td>
                     <td className={s.netAfterTax >= 0 ? 'positive' : 'negative'}>{formatEUR(s.netAfterTax)}</td>
                   </tr>
                 ))}
@@ -112,8 +145,8 @@ export default function Tax() {
                   <td className={data.totals.salesGainEUR >= 0 ? 'positive' : 'negative'}>
                     <strong>{formatEUR(data.totals.salesGainEUR)}</strong>
                   </td>
-                  <td><strong>{data.totals.salesTaxPaid > 0 ? formatEUR(data.totals.salesTaxPaid) : '—'}</strong></td>
-                  <td><strong>{totalAllocated > 0 ? formatEUR(totalAllocated) : '—'}</strong></td>
+                  <td><strong>{totalAllocatedExpected > 0 ? formatEUR(totalAllocatedExpected) : '—'}</strong></td>
+                  <td><strong>{totalAllocatedPaid > 0 ? formatEUR(totalAllocatedPaid) : '—'}</strong></td>
                   <td className={totalNet >= 0 ? 'positive' : 'negative'}><strong>{formatEUR(totalNet)}</strong></td>
                 </tr>
               </tbody>

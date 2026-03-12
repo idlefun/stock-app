@@ -19,6 +19,7 @@ app.use('/api/tax', require('./routes/tax'));
 app.use('/api/fund-history', require('./routes/fundHistory'));
 app.use('/api/manual-prices', require('./routes/manualPrices'));
 app.use('/api/backup', require('./routes/backup'));
+app.use('/api/tax-paid', require('./routes/taxPaid'));
 
 // Serve React frontend in production
 const clientBuildPath = path.join(__dirname, '..', 'client', 'dist');

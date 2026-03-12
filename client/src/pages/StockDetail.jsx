@@ -90,7 +90,7 @@ export default function StockDetail() {
             <th>Price</th>
             {hasSplits && <th>Adjusted Price</th>}
             <th>Commission</th>
-            <th>Tax</th>
+            <th>WHT</th>
             <th>EUR/USD Rate</th>
             <th>Total</th>
             <th>Realized Gain/Loss</th>
@@ -126,7 +126,7 @@ export default function StockDetail() {
                   : '—'}
               </td>
               <td>
-                {(t.type === 'dividend' || t.type === 'sell') && t.taxPaid > 0
+                {t.type === 'dividend' && t.taxPaid > 0
                   ? formatEUR(t.taxPaid) : '—'}
               </td>
               <td className="exchange-rate-cell">

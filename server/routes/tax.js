@@ -80,7 +80,6 @@ router.get('/', async (req, res) => {
               proceedsEUR: netProceeds,
               costBasisEUR: costBasis,
               gainEUR,
-              taxPaid: t.taxPaid || 0,
             });
           }
         }
@@ -109,7 +108,7 @@ router.get('/', async (req, res) => {
     // Totals
     const totalGainEUR = sales.reduce((s, t) => s + t.gainEUR, 0);
     const totalLossEUR = sales.filter(s => s.gainEUR < 0).reduce((s, t) => s + t.gainEUR, 0);
-    const totalSalesTax = sales.reduce((s, t) => s + t.taxPaid, 0);
+    const totalSalesTax = 0; // Now tracked via /api/tax-paid per year
     const totalDivGrossEUR = dividends.reduce((s, t) => s + t.grossEUR, 0);
     const totalDivTax = dividends.reduce((s, t) => s + t.taxPaid, 0);
     const totalDivNetEUR = dividends.reduce((s, t) => s + t.netEUR, 0);

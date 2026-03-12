@@ -26,6 +26,8 @@ export const api = {
   setManualPrice: (ticker, year, price, currency) => request('/manual-prices', { method: 'PUT', body: JSON.stringify({ ticker, year, price, currency }) }),
   deleteManualPrice: (ticker, year) => request(`/manual-prices/${ticker}/${year}`, { method: 'DELETE' }),
   getTax: (year) => request(`/tax?year=${year}`),
+  getTaxPaid: () => request('/tax-paid'),
+  setTaxPaid: (year, amount) => request('/tax-paid', { method: 'PUT', body: JSON.stringify({ year, amount }) }),
   downloadBackup: async () => {
     const res = await fetch(`${API_BASE}/backup`);
     if (!res.ok) throw new Error('Backup failed');

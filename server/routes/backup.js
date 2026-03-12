@@ -5,7 +5,7 @@ const path = require('path');
 const router = express.Router();
 const dataDir = path.join(__dirname, '..', '..', 'data');
 
-const BACKUP_FILES = ['transactions.json', 'manual-prices.json', 'hist-prices.json'];
+const BACKUP_FILES = ['transactions.json', 'manual-prices.json', 'hist-prices.json', 'tax-paid.json'];
 
 // GET /api/backup — download all user data as JSON
 router.get('/', (req, res) => {
