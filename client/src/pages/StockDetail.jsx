@@ -2,32 +2,39 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { formatUSD, formatEUR, formatPct, formatDate, calcTotalCostEUR } from '../lib/format';
+import { EditRow } from '../components/TransactionList';
 
 export default function StockDetail() {
   const { ticker } = useParams();
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [editingId, setEditingId] = useState(null);
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      try {
-        const data = await api.getStockDetail(ticker);
-        setDetail(data);
-      } catch (err) {
-        setError(err.message);
-      }
-      setLoading(false);
+  async function load() {
+    setLoading(true);
+    try {
+      const data = await api.getStockDetail(ticker);
+      setDetail(data);
+    } catch (err) {
+      setError(err.message);
     }
+    setLoading(false);
+  }
+
+  useEffect(() => { load(); }, [ticker]);
+
+  function handleSaved() {
+    setEditingId(null);
     load();
-  }, [ticker]);
+  }
 
   if (loading) return <p>Loading...</p>;
   if (error) return <p className="error">Error: {error}</p>;
   if (!detail) return null;
 
   const hasSplits = detail.splits && detail.splits.length > 0;
+  const extraCols = hasSplits ? 2 : 0;
 
   return (
     <div className="stock-detail">
@@ -84,55 +91,73 @@ export default function StockDetail() {
             <th>Price</th>
             {hasSplits && <th>Adjusted Price</th>}
             <th>Commission</th>
+            <th>Tax</th>
             <th>EUR/USD Rate</th>
             <th>Total</th>
             <th>Realized Gain/Loss</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
-          {detail.transactions.map(t => (
-            <tr key={t.id} className={t.type}>
-              <td>{formatDate(t.date)}</td>
-              <td className={`type-${t.type}`}>{t.type.toUpperCase()}</td>
-              <td>{t.quantity}</td>
-              {hasSplits && (
+          {detail.transactions.map(t =>
+            editingId === t.id ? (
+              <EditRow
+                key={t.id}
+                transaction={t}
+                onSave={handleSaved}
+                onCancel={() => setEditingId(null)}
+                extraColsAfter={extraCols + 1}
+              />
+            ) : (
+              <tr key={t.id} className={t.type}>
+                <td>{formatDate(t.date)}</td>
+                <td className={`type-${t.type}`}>{t.type.toUpperCase()}</td>
+                <td>{t.quantity}</td>
+                {hasSplits && (
+                  <td>
+                    {t.adjustedQuantity !== t.quantity ? (
+                      <span className="split-adjusted">{t.adjustedQuantity} <span className="split-mult">({t.splitMultiplier}x)</span></span>
+                    ) : t.quantity}
+                  </td>
+                )}
                 <td>
-                  {t.adjustedQuantity !== t.quantity ? (
-                    <span className="split-adjusted">{t.adjustedQuantity} <span className="split-mult">({t.splitMultiplier}x)</span></span>
-                  ) : t.quantity}
+                  {t.priceCurrency === 'USD' ? formatUSD(t.pricePerShare) : formatEUR(t.pricePerShare)}
                 </td>
-              )}
-              <td>
-                {t.priceCurrency === 'USD' ? formatUSD(t.pricePerShare) : formatEUR(t.pricePerShare)}
-              </td>
-              {hasSplits && (
+                {hasSplits && (
+                  <td>
+                    {t.adjustedQuantity !== t.quantity ? (
+                      <span className="split-adjusted">{formatUSD(t.adjustedPricePerShare)}</span>
+                    ) : (t.priceCurrency === 'USD' ? formatUSD(t.pricePerShare) : formatEUR(t.pricePerShare))}
+                  </td>
+                )}
                 <td>
-                  {t.adjustedQuantity !== t.quantity ? (
-                    <span className="split-adjusted">{formatUSD(t.adjustedPricePerShare)}</span>
-                  ) : (t.priceCurrency === 'USD' ? formatUSD(t.pricePerShare) : formatEUR(t.pricePerShare))}
+                  {t.commission > 0
+                    ? (t.commissionCurrency === 'USD' ? formatUSD(t.commission) : formatEUR(t.commission))
+                    : '—'}
                 </td>
-              )}
-              <td>
-                {t.commission > 0
-                  ? (t.commissionCurrency === 'USD' ? formatUSD(t.commission) : formatEUR(t.commission))
-                  : '—'}
-                {t.type === 'sell' && t.taxPaid > 0 && <><br /><span className="tax-label">Tax {formatEUR(t.taxPaid)}</span></>}
-              </td>
-              <td className="exchange-rate-cell">
-                {(t.priceCurrency === 'USD' || t.commissionCurrency === 'USD') && t.exchangeRate
-                  ? parseFloat(t.exchangeRate.toFixed(7))
-                  : '—'}
-              </td>
-              <td>{formatEUR(calcTotalCostEUR(t))}</td>
-              <td>
-                {t.realizedGainLossUSD != null ? (
-                  <span className={t.realizedGainLossUSD >= 0 ? 'positive' : 'negative'}>
-                    {formatUSD(t.realizedGainLossUSD)} / {formatEUR(t.realizedGainLossEUR)}
-                  </span>
-                ) : '—'}
-              </td>
-            </tr>
-          ))}
+                <td>
+                  {(t.type === 'dividend' || t.type === 'sell') && t.taxPaid > 0
+                    ? formatEUR(t.taxPaid) : '—'}
+                </td>
+                <td className="exchange-rate-cell">
+                  {(t.priceCurrency === 'USD' || t.commissionCurrency === 'USD') && t.exchangeRate
+                    ? parseFloat(t.exchangeRate.toFixed(7))
+                    : '—'}
+                </td>
+                <td>{formatEUR(calcTotalCostEUR(t))}</td>
+                <td>
+                  {t.realizedGainLossUSD != null ? (
+                    <span className={t.realizedGainLossUSD >= 0 ? 'positive' : 'negative'}>
+                      {formatUSD(t.realizedGainLossUSD)} / {formatEUR(t.realizedGainLossEUR)}
+                    </span>
+                  ) : '—'}
+                </td>
+                <td className="row-actions">
+                  <button className="btn-edit" onClick={() => setEditingId(t.id)} title="Edit">✎</button>
+                </td>
+              </tr>
+            )
+          )}
         </tbody>
       </table>
     </div>

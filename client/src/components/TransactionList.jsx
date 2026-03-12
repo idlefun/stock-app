@@ -8,7 +8,7 @@ function hasUSD(t) {
   return t.priceCurrency === 'USD' || t.commissionCurrency === 'USD';
 }
 
-function EditRow({ transaction, onSave, onCancel }) {
+export function EditRow({ transaction, onSave, onCancel, extraColsBefore = 0, extraColsAfter = 0 }) {
   const isDividend = transaction.type === 'dividend';
   const [form, setForm] = useState({
     type: transaction.type,
@@ -152,13 +152,14 @@ function EditRow({ transaction, onSave, onCancel }) {
           ) : '—'}
         </td>
         <td>—</td>
+        {Array.from({ length: extraColsAfter }, (_, i) => <td key={`extra-${i}`}>—</td>)}
         <td className="edit-actions">
           <button className="btn-save" onClick={handleSave} disabled={saving}>Save</button>
           <button className="btn-cancel" onClick={onCancel}>Cancel</button>
         </td>
       </tr>
       {error && (
-        <tr><td colSpan="11" className="edit-error">{error}</td></tr>
+        <tr><td colSpan={11 + extraColsBefore + extraColsAfter} className="edit-error">{error}</td></tr>
       )}
     </>
   );
