@@ -7,12 +7,11 @@ const COLUMNS = [
   { key: 'name', label: 'Name', getValue: s => s.name },
   { key: 'quantityHeld', label: 'Qty', getValue: s => s.quantityHeld },
   { key: 'currentPrice', label: 'Price', getValue: s => s.currentPrice ?? 0 },
-  { key: 'totalInvestedEUR', label: 'Invested', getValue: s => s.totalInvestedEUR ?? 0 },
   { key: 'currentValueEUR', label: 'Holdings Value', getValue: s => s.currentValueEUR ?? 0 },
   { key: 'unrealizedEUR', label: 'Unrealized', getValue: s => s.unrealizedEUR ?? 0 },
   { key: 'realizedEUR', label: 'Realized', getValue: s => s.realizedEUR ?? 0 },
   { key: 'netDividendsEUR', label: 'Dividends', getValue: s => s.netDividendsEUR ?? 0 },
-  { key: 'totalGainEUR', label: 'Total Gain', getValue: s => s.totalGainEUR ?? 0 },
+  { key: 'totalGainEUR', label: 'Net Gain', getValue: s => s.totalGainEUR ?? 0 },
   { key: 'allocationPct', label: 'Alloc', getValue: s => s.allocationPct ?? 0 },
 ];
 
@@ -70,9 +69,6 @@ export default function HoldingsTable({ stocks }) {
                   {s.priceStale && <span className="stale-badge">Stale</span>}
                 </>
               ) : '—'}
-            </td>
-            <td>
-              <div>{formatEUR(s.totalInvestedEUR)}</div>
             </td>
             <td>
               {s.quantityHeld > 0 ? formatEUR(s.currentValueEUR) : '—'}
