@@ -118,7 +118,7 @@ router.get('/', async (req, res) => {
     const CGT_RATE = 0.33;
     const CGT_EXEMPTION = 1270;
     const taxableGain = Math.max(0, totalGainEUR - CGT_EXEMPTION);
-    const expectedCGT = taxableGain * CGT_RATE;
+    const expectedCGT = Math.floor(taxableGain * CGT_RATE);
 
     // Dividends: Irish income tax on foreign dividends
     // Standard rate: 52% (40% IT + 8% USC + 4% PRSI)
