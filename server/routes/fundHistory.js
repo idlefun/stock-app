@@ -7,6 +7,13 @@ const { getSplits, splitMultiplier, loadCache: loadSplitsCache } = require('./sp
 const { getPrice, loadCache: loadPriceCache } = require('./prices');
 const { createCache } = require('../lib/cache');
 const { getManualPrices } = require('./manualPrices');
+const fs = require('fs');
+const path = require('path');
+
+const taxPaidPath = path.join(__dirname, '..', '..', 'data', 'tax-paid.json');
+function loadTaxPaid() {
+  try { return JSON.parse(fs.readFileSync(taxPaidPath, 'utf8')); } catch { return {}; }
+}
 
 const router = express.Router();
 const histPriceCache = createCache('hist-prices.json', 24 * 60 * 60 * 1000);
@@ -62,6 +69,7 @@ async function computeFundHistory(txns, startCash, startYear, splitsMap, fallbac
   for (let y = startYear; y <= currentYear; y++) years.push(y);
 
   const sorted = [...txns].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const taxPaidData = opts.taxPaidData || {};
 
   const snapshots = [];
   let cash = startCash;
@@ -89,8 +97,7 @@ async function computeFundHistory(txns, startCash, startYear, splitsMap, fallbac
       } else if (t.type === 'sell') {
         const proceedsEUR = toEUR(t.pricePerShare * t.quantity, t.priceCurrency, rate);
         const commEUR = t.commission > 0 ? toEUR(t.commission, t.commissionCurrency, rate) : 0;
-        const taxEUR = t.taxPaid || 0;
-        cash += proceedsEUR - commEUR - taxEUR;
+        cash += proceedsEUR - commEUR;
 
         if (holdings[t.ticker]) {
           const splits = splitsMap[t.ticker] || [];
@@ -105,6 +112,10 @@ async function computeFundHistory(txns, startCash, startYear, splitsMap, fallbac
 
       txnIdx++;
     }
+
+    // Deduct CGT paid for this year
+    const cgtPaid = taxPaidData[String(year)] || 0;
+    if (cgtPaid > 0) cash -= cgtPaid;
 
     const manualPrices = opts.manualPrices || {};
     const stockValues = {};
@@ -186,7 +197,8 @@ router.get('/', async (req, res) => {
 
     const noCashOnBuy = req.query.noCashOnBuy === 'true';
     const manualPrices = await getManualPrices();
-    const snapshots = await computeFundHistory(filtered, startCash, startYear, splitsMap, fallbackRate, { noCashOnBuy, manualPrices });
+    const taxPaidData = loadTaxPaid();
+    const snapshots = await computeFundHistory(filtered, startCash, startYear, splitsMap, fallbackRate, { noCashOnBuy, manualPrices, taxPaidData });
 
     res.json({ startCash, startYear, exclude, only, snapshots });
   } catch (err) {
