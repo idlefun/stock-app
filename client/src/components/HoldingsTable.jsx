@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { formatUSD, formatEUR, formatPct } from '../lib/format';
+import { formatEUR, formatPct } from '../lib/format';
 
 const COLUMNS = [
   { key: 'ticker', label: 'Ticker', getValue: s => s.ticker },
@@ -63,13 +63,11 @@ export default function HoldingsTable({ stocks }) {
             <td>{s.quantityHeld > 0 ? s.quantityHeld : '—'}</td>
             <td>
               <div>{formatEUR(s.totalInvestedEUR)}</div>
-              <div className="secondary">{formatUSD(s.totalInvestedUSD)}</div>
             </td>
             <td>
               {s.quantityHeld > 0 ? (
                 <>
                   <div>{formatEUR(s.currentValueEUR)}</div>
-                  <div className="secondary">{formatUSD(s.currentValueUSD)}</div>
                   {s.priceStale && <span className="stale-badge">Stale</span>}
                 </>
               ) : '—'}

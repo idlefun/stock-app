@@ -47,13 +47,11 @@ export default function StockDetail() {
         </div>
         <div className="summary-card">
           <span className="label">Avg Cost / Share (adjusted)</span>
-          <span className="value">{formatUSD(detail.avgCostPerShareUSD)}</span>
-          <span className="value secondary">{formatEUR(detail.avgCostPerShareEUR)}</span>
+          <span className="value">{formatEUR(detail.avgCostPerShareEUR)}</span>
         </div>
         <div className="summary-card">
           <span className="label">Current Price</span>
-          <span className="value">{formatUSD(detail.currentPriceUSD)}</span>
-          <span className="value secondary">{formatEUR(detail.currentPriceEUR)}</span>
+          <span className="value">{formatEUR(detail.currentPriceEUR)}</span>
           {detail.priceStale && <span className="stale-badge">Stale</span>}
         </div>
         <div className={`summary-card ${detail.totalProfitEUR >= 0 ? 'positive' : 'negative'}`}>
@@ -62,7 +60,6 @@ export default function StockDetail() {
             {formatEUR(detail.totalProfitEUR)}
             {detail.pctReturn != null && ` (${formatPct(detail.pctReturn)})`}
           </span>
-          <span className="value secondary">{formatUSD(detail.totalProfitUSD)}</span>
         </div>
         {detail.allocatedTaxEUR > 0 && (
           <div className={`summary-card ${detail.totalProfitAfterTaxEUR >= 0 ? 'positive' : 'negative'}`}>
@@ -143,9 +140,9 @@ export default function StockDetail() {
               </td>
               <td>{formatEUR(calcTotalCostEUR(t))}</td>
               <td>
-                {t.realizedGainLossUSD != null ? (
-                  <span className={t.realizedGainLossUSD >= 0 ? 'positive' : 'negative'}>
-                    {formatUSD(t.realizedGainLossUSD)} / {formatEUR(t.realizedGainLossEUR)}
+                {t.realizedGainLossEUR != null ? (
+                  <span className={t.realizedGainLossEUR >= 0 ? 'positive' : 'negative'}>
+                    {formatEUR(t.realizedGainLossEUR)}
                   </span>
                 ) : '—'}
               </td>
