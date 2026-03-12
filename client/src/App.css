@@ -173,6 +173,10 @@ th.sortable:hover { background: #eef1f6; }
 .backup-status.success { background: #f0fdf4; color: #16a34a; }
 .backup-status.error { background: #fef2f2; color: #dc2626; }
 
+/* Penalty rate */
+.summary-card.penalty { border: 2px solid #dc2626; background: #fef2f2; }
+.penalty-badge { display: inline-block; background: #dc2626; color: #fff; font-size: 0.65rem; padding: 1px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle; font-weight: 700; text-transform: uppercase; }
+
 /* Edit modal */
 .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 1000; }
 .modal-form { background: #fff; border-radius: 10px; padding: 24px; box-shadow: 0 8px 30px rgba(0,0,0,0.2); max-width: 800px; width: 90%; max-height: 90vh; overflow-y: auto; }

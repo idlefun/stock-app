@@ -121,9 +121,17 @@ router.get('/', async (req, res) => {
     const expectedCGT = taxableGain * CGT_RATE;
 
     // Dividends: Irish income tax on foreign dividends
-    // Standard rates: Income tax 20%/40%, USC up to 8%, PRSI 4%
-    // US WHT credit of 15% applies. We compute at higher marginal rate (52%) as default.
-    const DIVIDEND_TAX_RATE = 0.52; // 40% IT + 8% USC + 4% PRSI
+    // Standard rate: 52% (40% IT + 8% USC + 4% PRSI)
+    // Penalty rates applied for years where dividends were not declared on time
+    const PENALTY_RATES = {
+      '2012': 0.70081,
+      '2013': 0.66244,
+      '2014': 0.62407,
+      '2015': 0.5735,
+    };
+    const STANDARD_DIV_RATE = 0.52;
+    const DIVIDEND_TAX_RATE = PENALTY_RATES[year] || STANDARD_DIV_RATE;
+    const isPenaltyRate = !!PENALTY_RATES[year];
     const US_WHT_RATE = 0.15;
     let expectedDivTax = 0;
     for (const d of dividends) {
@@ -152,6 +160,7 @@ router.get('/', async (req, res) => {
         taxableGain,
         cgt: expectedCGT,
         dividendTaxRate: DIVIDEND_TAX_RATE,
+        isPenaltyRate,
         dividendTax: expectedDivTax,
         totalExpected: expectedCGT + expectedDivTax,
       },

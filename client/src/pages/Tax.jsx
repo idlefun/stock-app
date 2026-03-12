@@ -89,10 +89,13 @@ export default function Tax() {
                 </span>
               )}
             </div>
-            <div className="summary-card">
-              <span className="label">Expected Dividend Tax</span>
+            <div className={`summary-card ${data.expected.isPenaltyRate ? 'penalty' : ''}`}>
+              <span className="label">
+                Expected Dividend Tax
+                {data.expected.isPenaltyRate && <span className="penalty-badge">Penalty</span>}
+              </span>
               <span className="value">{formatEUR(data.expected.dividendTax)}</span>
-              <span className="secondary">@ {(data.expected.dividendTaxRate * 100).toFixed(0)}% on {formatEUR(data.totals.divGrossEUR)}</span>
+              <span className="secondary">@ {(data.expected.dividendTaxRate * 100).toFixed(3)}% on {formatEUR(data.totals.divGrossEUR)}</span>
               {data.totals.divTaxPaid > 0 && <span className="secondary">WHT credit {formatEUR(data.totals.divTaxPaid)}</span>}
             </div>
             <div className="summary-card">
