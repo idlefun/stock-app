@@ -32,5 +32,6 @@ export function calcTotalCostEUR(t) {
     ? (t.commissionCurrency === 'EUR' ? t.commission : t.commission / rate)
     : 0;
   const taxEUR = (t.type === 'sell' && t.taxPaid) ? t.taxPaid : 0;
+  if (t.type === 'sell') return costEUR - commEUR - taxEUR;
   return costEUR + commEUR + taxEUR;
 }
