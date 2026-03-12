@@ -146,9 +146,11 @@ export default function Tax() {
               <span className="secondary">@ {(data.expected.etfTaxRate * 100).toFixed(0)}% on {formatEUR(data.expected.etfTaxableGain)}</span>
             </div>
 
-            {/* CGT Paid */}
+            {/* Expected Total + Tax Paid */}
             <div className="summary-card">
-              <span className="label">Total Tax Paid</span>
+              <span className="label">Expected Total Tax</span>
+              <span className="value">{formatEUR(data.expected.cgt)}</span>
+              <span className="label" style={{ marginTop: '8px' }}>Tax Paid</span>
               {editingTaxPaid ? (
                 <span className="value" style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                   <input type="number" step="0.01" min="0" value={taxPaidInput}
