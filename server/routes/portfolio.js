@@ -163,7 +163,7 @@ router.get('/', async (req, res) => {
       }
 
       const currentValueUSD = currentPrice && summary.quantityHeld > 0
-        ? convertToUSD(currentPrice, 'USD', eurToUsd) * summary.quantityHeld
+        ? convertToUSD(currentPrice, priceCurrency, eurToUsd) * summary.quantityHeld
         : null;
 
       // Unrealized gain on current holdings
