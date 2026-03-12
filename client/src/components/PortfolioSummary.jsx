@@ -30,6 +30,13 @@ export default function PortfolioSummary({ totals, exchangeRate }) {
         <span className="label">Total Gain / Loss</span>
         <span className="value">{formatEUR(totals.totalGainEUR)} ({formatPct(totals.pctChange)})</span>
       </div>
+      {totals.cgtPaidEUR > 0 && (
+        <div className={`summary-card ${(totals.totalGainAfterTaxEUR || 0) >= 0 ? 'positive' : 'negative'}`}>
+          <span className="label">Gain After Tax</span>
+          <span className="value">{formatEUR(totals.totalGainAfterTaxEUR)}</span>
+          <span className="value secondary">CGT paid: {formatEUR(totals.cgtPaidEUR)}</span>
+        </div>
+      )}
       {exchangeRate && (
         <div className="summary-card small">
           <span className="label">EUR/USD Rate</span>

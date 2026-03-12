@@ -234,6 +234,10 @@ router.get('/', async (req, res) => {
     const totalGainUSD = totalRealizedUSD + totalUnrealizedUSD + totalNetDividendsUSD;
     const totalPctChange = totalInvestedUSD > 0 ? (totalGainUSD / totalInvestedUSD) * 100 : 0;
 
+    // Sum CGT paid across all years
+    const taxPaidData = loadTaxPaid();
+    const totalCgtPaidEUR = Object.values(taxPaidData).reduce((sum, v) => sum + (Number(v) || 0), 0);
+
     res.json({
       stocks,
       totals: {
@@ -255,6 +259,8 @@ router.get('/', async (req, res) => {
         netDividendsEUR: convertToEUR(totalNetDividendsUSD, 'USD', eurToUsd),
         totalGainUSD: totalGainUSD,
         totalGainEUR: convertToEUR(totalGainUSD, 'USD', eurToUsd),
+        cgtPaidEUR: totalCgtPaidEUR,
+        totalGainAfterTaxEUR: convertToEUR(totalGainUSD, 'USD', eurToUsd) - totalCgtPaidEUR,
         pctChange: totalPctChange,
       },
       exchangeRate: { eurToUsd, stale: rateStale },
