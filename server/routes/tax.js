@@ -39,12 +39,12 @@ router.get('/', async (req, res) => {
       let splits = [];
       try { splits = await getSplits(ticker); } catch { /* no splits */ }
 
-      // Process buys and sells in date order to compute avg cost basis
+      // Process buys and sells in date order using FIFO cost basis
       const buySells = txns.filter(t => t.type === 'buy' || t.type === 'sell')
         .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-      let totalAdjQty = 0;
-      let totalCostEUR = 0;
+      // FIFO queue of buy lots: { adjQty, costPerShareEUR }
+      const buyLots = [];
 
       for (const t of buySells) {
         const rate = t.exchangeRate || fallbackRate;
@@ -54,19 +54,25 @@ router.get('/', async (req, res) => {
         if (t.type === 'buy') {
           const costEUR = toEUR(t.pricePerShare * t.quantity, t.priceCurrency, rate);
           const commEUR = t.commission > 0 ? toEUR(t.commission, t.commissionCurrency, rate) : 0;
-          totalCostEUR += costEUR + commEUR;
-          totalAdjQty += adjQty;
+          const costPerShareEUR = (costEUR + commEUR) / adjQty;
+          buyLots.push({ adjQty, costPerShareEUR });
         } else {
-          // Sell
-          const avgCostPerShare = totalAdjQty > 0 ? totalCostEUR / totalAdjQty : 0;
-          const costBasis = avgCostPerShare * adjQty;
+          // Sell — consume earliest buy lots first (FIFO)
+          let remaining = adjQty;
+          let costBasis = 0;
+          while (remaining > 0 && buyLots.length > 0) {
+            const lot = buyLots[0];
+            const used = Math.min(remaining, lot.adjQty);
+            costBasis += used * lot.costPerShareEUR;
+            lot.adjQty -= used;
+            remaining -= used;
+            if (lot.adjQty <= 0) buyLots.shift();
+          }
+
           const proceedsEUR = toEUR(t.pricePerShare * t.quantity, t.priceCurrency, rate);
           const commEUR = t.commission > 0 ? toEUR(t.commission, t.commissionCurrency, rate) : 0;
           const netProceeds = proceedsEUR - commEUR;
           const gainEUR = netProceeds - costBasis;
-
-          totalCostEUR -= costBasis;
-          totalAdjQty -= adjQty;
 
           // Only include sells in the requested year
           if (t.date.startsWith(year)) {
