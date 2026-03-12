@@ -223,20 +223,67 @@ router.get('/', async (req, res) => {
       }
     }
 
-    // Allocation percentages
+    // Compute per-ticker allocated CGT using avg cost basis
+    const taxPaidData = loadTaxPaid();
+    const totalCgtPaidEUR = Object.values(taxPaidData).reduce((sum, v) => sum + (Number(v) || 0), 0);
+
+    // Compute sell gains by year by ticker for proportional tax allocation
+    const gainsByYear = {}; // { year: { ticker: gainEUR } }
+    for (const [ticker, holding] of Object.entries(holdings)) {
+      const splits = splitsMap[ticker];
+      const buySells = [...holding.buys, ...holding.sells]
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+      let qty = 0, costEUR = 0;
+      for (const t of buySells) {
+        const rate = t.exchangeRate || eurToUsd;
+        const mult = splitMultiplier(splits, t.date);
+        const adjQty = t.quantity * mult;
+        const toE = (amt, cur) => cur === 'EUR' ? amt : amt / rate;
+        if (t.type === 'buy') {
+          costEUR += toE(t.pricePerShare * t.quantity, t.priceCurrency) +
+            (t.commission > 0 ? toE(t.commission, t.commissionCurrency) : 0);
+          qty += adjQty;
+        } else {
+          const avg = qty > 0 ? costEUR / qty : 0;
+          const basis = avg * adjQty;
+          const proceeds = toE(t.pricePerShare * t.quantity, t.priceCurrency) -
+            (t.commission > 0 ? toE(t.commission, t.commissionCurrency) : 0);
+          const gain = proceeds - basis;
+          costEUR -= basis;
+          qty -= adjQty;
+          const yr = t.date.substring(0, 4);
+          if (!gainsByYear[yr]) gainsByYear[yr] = {};
+          gainsByYear[yr][ticker] = (gainsByYear[yr][ticker] || 0) + gain;
+        }
+      }
+    }
+
+    // Allocate tax paid to each ticker proportionally per year
+    const allocatedTaxByTicker = {};
+    for (const [yr, tickerGains] of Object.entries(gainsByYear)) {
+      const cgtPaid = taxPaidData[yr] || 0;
+      if (cgtPaid <= 0) continue;
+      const totalPositiveGains = Object.values(tickerGains).filter(g => g > 0).reduce((s, g) => s + g, 0);
+      if (totalPositiveGains <= 0) continue;
+      for (const [tk, gain] of Object.entries(tickerGains)) {
+        if (gain > 0) {
+          allocatedTaxByTicker[tk] = (allocatedTaxByTicker[tk] || 0) + (gain / totalPositiveGains) * cgtPaid;
+        }
+      }
+    }
+
+    // Apply allocated tax and allocation percentages to stocks
     for (const stock of stocks) {
       stock.allocationPct = totalValueUSD > 0 && stock.currentValueUSD !== null
         ? (stock.currentValueUSD / totalValueUSD) * 100
         : 0;
+      stock.allocatedTaxEUR = allocatedTaxByTicker[stock.ticker] || 0;
+      stock.totalGainAfterTaxEUR = stock.totalGainEUR - stock.allocatedTaxEUR;
     }
 
     const totalUnrealizedUSD = totalValueUSD - totalCostUSD;
     const totalGainUSD = totalRealizedUSD + totalUnrealizedUSD + totalNetDividendsUSD;
     const totalPctChange = totalInvestedUSD > 0 ? (totalGainUSD / totalInvestedUSD) * 100 : 0;
-
-    // Sum CGT paid across all years
-    const taxPaidData = loadTaxPaid();
-    const totalCgtPaidEUR = Object.values(taxPaidData).reduce((sum, v) => sum + (Number(v) || 0), 0);
 
     res.json({
       stocks,

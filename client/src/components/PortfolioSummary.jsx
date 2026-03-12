@@ -14,11 +14,11 @@ export default function PortfolioSummary({ totals, exchangeRate }) {
         <span className="value">{formatEUR(totals.holdingsValueEUR)}</span>
       </div>
       <div className={`summary-card ${(totals.unrealizedEUR || 0) >= 0 ? 'positive' : 'negative'}`}>
-        <span className="label">Unrealized</span>
+        <span className="label">Unrealised</span>
         <span className="value">{formatEUR(totals.unrealizedEUR)}</span>
       </div>
       <div className={`summary-card ${(totals.realizedEUR || 0) >= 0 ? 'positive' : 'negative'}`}>
-        <span className="label">Realized</span>
+        <span className="label">Realised</span>
         <span className="value">{formatEUR(totals.realizedEUR)}</span>
       </div>
       <div className={`summary-card ${(totals.netDividendsEUR || 0) > 0 ? 'positive' : ''}`}>

@@ -97,7 +97,7 @@ export default function StockDetail() {
             <th>WHT</th>
             <th>EUR/USD Rate</th>
             <th>Total</th>
-            <th>Realized Gain/Loss</th>
+            <th>Realised Gain/Loss</th>
             <th></th>
           </tr>
         </thead>

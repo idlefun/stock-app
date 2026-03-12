@@ -8,10 +8,10 @@ const COLUMNS = [
   { key: 'quantityHeld', label: 'Qty', getValue: s => s.quantityHeld },
   { key: 'currentPrice', label: 'Price', getValue: s => s.currentPrice ?? 0 },
   { key: 'currentValueEUR', label: 'Holdings Value', getValue: s => s.currentValueEUR ?? 0 },
-  { key: 'unrealizedEUR', label: 'Unrealized', getValue: s => s.unrealizedEUR ?? 0 },
-  { key: 'realizedEUR', label: 'Realized', getValue: s => s.realizedEUR ?? 0 },
+  { key: 'unrealizedEUR', label: 'Unrealised', getValue: s => s.unrealizedEUR ?? 0 },
+  { key: 'realizedEUR', label: 'Realised', getValue: s => s.realizedEUR ?? 0 },
   { key: 'netDividendsEUR', label: 'Dividends', getValue: s => s.netDividendsEUR ?? 0 },
-  { key: 'totalGainEUR', label: 'Net Gain', getValue: s => s.totalGainEUR ?? 0 },
+  { key: 'totalGainAfterTaxEUR', label: 'Net Gain', getValue: s => s.totalGainAfterTaxEUR ?? 0 },
   { key: 'allocationPct', label: 'Alloc', getValue: s => s.allocationPct ?? 0 },
 ];
 
@@ -91,8 +91,8 @@ export default function HoldingsTable({ stocks }) {
                 </>
               ) : '—'}
             </td>
-            <td className={s.totalGainEUR >= 0 ? 'positive' : 'negative'}>
-              <div>{formatEUR(s.totalGainEUR)}</div>
+            <td className={s.totalGainAfterTaxEUR >= 0 ? 'positive' : 'negative'}>
+              <div>{formatEUR(s.totalGainAfterTaxEUR)}</div>
               <div>{formatPct(s.pctChange)}</div>
             </td>
             <td>{s.allocationPct?.toFixed(1)}%</td>
