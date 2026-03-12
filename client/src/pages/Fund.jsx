@@ -128,8 +128,8 @@ function FundTable({ data, startCash, onPriceChange }) {
           <th>Total</th>
           <th>Change</th>
           <th>Cash</th>
-          {allTickers.map(t => <th key={t}>{t}</th>)}
           <th>Shares</th>
+          {allTickers.map(t => <th key={t}>{t}</th>)}
         </tr>
       </thead>
       <tbody>
@@ -145,6 +145,7 @@ function FundTable({ data, startCash, onPriceChange }) {
                 {i === 0 && startCash === 0 ? '—' : `${change >= 0 ? '+' : ''}${formatEUR(change)} (${changePct >= 0 ? '+' : ''}${changePct.toFixed(1)}%)`}
               </td>
               <td>{formatEUR(s.cash)}</td>
+              <td>{formatEUR(s.stocksTotalEUR)}</td>
               {allTickers.map(t => {
                 const stock = s.stocks[t];
                 if (!stock) return <td key={t}>—</td>;
@@ -158,7 +159,6 @@ function FundTable({ data, startCash, onPriceChange }) {
                   />
                 );
               })}
-              <td>{formatEUR(s.stocksTotalEUR)}</td>
             </tr>
           );
         })}
