@@ -46,7 +46,7 @@ router.get('/', async (req, res) => {
 // POST /api/transactions
 router.post('/', async (req, res) => {
   await withLock(FILENAME, async () => { try {
-    const { type, ticker, quantity, pricePerShare, priceCurrency, commission, commissionCurrency, date, companyName, exchangeRate: userRate, amount, amountCurrency, taxPaid } = req.body;
+    const { type, ticker, quantity, pricePerShare, priceCurrency, commission, commissionCurrency, date, companyName, exchangeRate: userRate, dividendAmount, dividendCurrency, taxPaid } = req.body;
 
     if (!type || !ticker || !date) {
       return res.status(400).json({ error: 'Missing required fields: type, ticker, date' });
@@ -56,13 +56,13 @@ router.post('/', async (req, res) => {
     }
 
     if (type === 'dividend') {
-      if (!amount || !amountCurrency) {
-        return res.status(400).json({ error: 'Missing required fields for dividend: amount, amountCurrency' });
+      if (!dividendAmount || !dividendCurrency) {
+        return res.status(400).json({ error: 'Missing required fields for dividend: dividendAmount, dividendCurrency' });
       }
-      if (!['USD', 'EUR'].includes(amountCurrency)) {
-        return res.status(400).json({ error: 'amountCurrency must be "USD" or "EUR"' });
+      if (!['USD', 'EUR'].includes(dividendCurrency)) {
+        return res.status(400).json({ error: 'dividendCurrency must be "USD" or "EUR"' });
       }
-      if (Number(amount) <= 0) {
+      if (Number(dividendAmount) <= 0) {
         return res.status(400).json({ error: 'Amount must be positive' });
       }
     } else {
@@ -97,7 +97,7 @@ router.post('/', async (req, res) => {
 
     // Fetch historical EUR/USD rate for USD transactions
     let exchangeRate = null;
-    const currencyForRate = type === 'dividend' ? amountCurrency : priceCurrency;
+    const currencyForRate = type === 'dividend' ? dividendCurrency : priceCurrency;
     const commCurrForRate = type === 'dividend' ? null : commissionCurrency;
     const hasCurrencyUSD = currencyForRate === 'USD' || (commCurrForRate && commCurrForRate === 'USD');
     if (hasCurrencyUSD) {
@@ -121,8 +121,8 @@ router.post('/', async (req, res) => {
     };
 
     if (type === 'dividend') {
-      transaction.amount = Number(amount);
-      transaction.amountCurrency = amountCurrency;
+      transaction.dividendAmount = Number(dividendAmount);
+      transaction.dividendCurrency = dividendCurrency;
       transaction.taxPaid = Number(taxPaid) || 0;
     } else {
       transaction.quantity = Number(quantity);
@@ -150,7 +150,7 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Transaction not found' });
     }
 
-    const { type, ticker, quantity, pricePerShare, priceCurrency, commission, commissionCurrency, date, exchangeRate, companyName, amount, amountCurrency, taxPaid } = req.body;
+    const { type, ticker, quantity, pricePerShare, priceCurrency, commission, commissionCurrency, date, exchangeRate, companyName, dividendAmount, dividendCurrency, taxPaid } = req.body;
 
     if (type && !['buy', 'sell', 'dividend'].includes(type)) {
       return res.status(400).json({ error: 'Type must be "buy", "sell", or "dividend"' });
@@ -176,8 +176,8 @@ router.put('/:id', async (req, res) => {
     if (date !== undefined) updated.date = date;
     if (exchangeRate !== undefined) updated.exchangeRate = exchangeRate !== null ? Number(exchangeRate) : null;
     if (companyName !== undefined) updated.companyName = companyName?.trim() || undefined;
-    if (amount !== undefined) updated.amount = Number(amount);
-    if (amountCurrency !== undefined) updated.amountCurrency = amountCurrency;
+    if (dividendAmount !== undefined) updated.dividendAmount = Number(dividendAmount);
+    if (dividendCurrency !== undefined) updated.dividendCurrency = dividendCurrency;
     if (taxPaid !== undefined) updated.taxPaid = Number(taxPaid) || 0;
 
     // Sell validation for updated transaction (split-adjusted)
@@ -239,12 +239,12 @@ router.post('/import', async (req, res) => {
         };
 
         if (type === 'dividend') {
-          if (!row.amount || !row.amountCurrency) {
-            errors.push({ row: i + 1, error: 'Dividend missing amount or amountCurrency' });
+          if (!row.dividendAmount || !row.dividendCurrency) {
+            errors.push({ row: i + 1, error: 'Dividend missing dividendAmount or dividendCurrency' });
             continue;
           }
-          txn.amount = Number(row.amount);
-          txn.amountCurrency = row.amountCurrency;
+          txn.dividendAmount = Number(row.dividendAmount);
+          txn.dividendCurrency = row.dividendCurrency;
           txn.taxPaid = Number(row.taxPaid) || 0;
         } else {
           if (!row.quantity || (row.pricePerShare == null || row.pricePerShare === '') || !row.priceCurrency) {

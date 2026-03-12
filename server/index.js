@@ -1,12 +1,16 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const { runMigrations } = require('./lib/migrations');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
+
+// Run data migrations before starting
+runMigrations().catch(err => console.error('Migration error:', err.message));
 
 // API routes
 app.use('/api/transactions', require('./routes/transactions'));

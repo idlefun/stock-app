@@ -95,7 +95,7 @@ router.get('/', async (req, res) => {
       const divs = txns.filter(t => t.type === 'dividend' && t.date.startsWith(year));
       for (const d of divs) {
         const rate = d.exchangeRate || fallbackRate;
-        const grossEUR = toEUR(d.amount, d.amountCurrency, rate);
+        const grossEUR = toEUR(d.dividendAmount, d.dividendCurrency, rate);
         dividends.push({
           id: d.id,
           ticker,

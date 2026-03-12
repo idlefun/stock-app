@@ -99,7 +99,7 @@ async function computeFundHistory(txns, startCash, startYear, splitsMap, fallbac
           if (holdings[t.ticker].quantity <= 0.001) delete holdings[t.ticker];
         }
       } else if (t.type === 'dividend') {
-        const grossEUR = toEUR(t.amount, t.amountCurrency, rate);
+        const grossEUR = toEUR(t.dividendAmount, t.dividendCurrency, rate);
         cash += grossEUR - (t.taxPaid || 0);
       }
 

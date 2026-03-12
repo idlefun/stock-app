@@ -75,7 +75,7 @@ function calcStockSummary(holding, eurToUsd, splits) {
   let dividendsUSD = 0;
   let taxPaidEUR = 0;
   for (const d of dividends) {
-    dividendsUSD += convertToUSD(d.amount, d.amountCurrency, eurToUsd);
+    dividendsUSD += convertToUSD(d.dividendAmount, d.dividendCurrency, eurToUsd);
     taxPaidEUR += d.taxPaid || 0;
   }
   const taxPaidUSD = convertToUSD(taxPaidEUR, 'EUR', eurToUsd);
@@ -301,7 +301,7 @@ router.get('/:ticker', async (req, res) => {
       const txnRate = t.exchangeRate || eurToUsd;
 
       if (t.type === 'dividend') {
-        const grossEUR = toEUR(t.amount, t.amountCurrency, txnRate);
+        const grossEUR = toEUR(t.dividendAmount, t.dividendCurrency, txnRate);
         const netEUR = grossEUR - (t.taxPaid || 0);
         totalDividendsEUR += netEUR;
         detail.push({ ...t, splitMultiplier: 1, adjustedQuantity: 0, adjustedPricePerShare: 0, realizedGainLossUSD: null, realizedGainLossEUR: null });

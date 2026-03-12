@@ -14,8 +14,8 @@ export default function EditModal({ transaction, onSave, onCancel }) {
     commission: transaction.commission ?? '',
     commissionCurrency: transaction.commissionCurrency || 'USD',
     exchangeRate: transaction.exchangeRate ?? '',
-    amount: transaction.amount ?? '',
-    amountCurrency: transaction.amountCurrency || 'USD',
+    amount: transaction.dividendAmount ?? '',
+    amountCurrency: transaction.dividendCurrency || 'USD',
     taxPaid: transaction.taxPaid ?? '',
     companyName: transaction.companyName || '',
   });
@@ -73,8 +73,8 @@ export default function EditModal({ transaction, onSave, onCancel }) {
           type: form.type,
           ticker: form.ticker,
           date: form.date,
-          amount: Number(form.amount),
-          amountCurrency: form.amountCurrency,
+          dividendAmount: Number(form.amount),
+          dividendCurrency: form.amountCurrency,
           taxPaid: Number(form.taxPaid) || 0,
           exchangeRate: form.exchangeRate !== '' ? Number(form.exchangeRate) : null,
         });

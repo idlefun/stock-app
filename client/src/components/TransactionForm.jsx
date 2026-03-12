@@ -89,8 +89,8 @@ export default function TransactionForm({ onSubmit }) {
           type: form.type,
           ticker: form.ticker,
           date: form.date,
-          amount: Number(form.amount),
-          amountCurrency: form.amountCurrency || 'USD',
+          dividendAmount: Number(form.amount),
+          dividendCurrency: form.amountCurrency || 'USD',
           taxPaid: Number(form.taxPaid) || 0,
           exchangeRate: form.exchangeRate ? Number(form.exchangeRate) : undefined,
         };

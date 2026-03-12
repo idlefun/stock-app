@@ -22,7 +22,7 @@ export function formatDate(dateStr) {
 export function calcTotalCostEUR(t) {
   const rate = t.exchangeRate || 1;
   if (t.type === 'dividend') {
-    const grossEUR = t.amountCurrency === 'EUR' ? t.amount : t.amount / rate;
+    const grossEUR = t.dividendCurrency === 'EUR' ? t.dividendAmount : t.dividendAmount / rate;
     return grossEUR - (t.taxPaid || 0);
   }
   const costEUR = t.priceCurrency === 'EUR'

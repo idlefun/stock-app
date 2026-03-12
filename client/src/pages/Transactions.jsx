@@ -5,7 +5,7 @@ import CsvImport from '../components/CsvImport';
 import TransactionList from '../components/TransactionList';
 
 function exportCSV(transactions) {
-  const headers = ['type','ticker','date','quantity','pricePerShare','priceCurrency','commission','commissionCurrency','amount','amountCurrency','taxPaid','exchangeRate','companyName'];
+  const headers = ['type','ticker','date','quantity','pricePerShare','priceCurrency','commission','commissionCurrency','dividendAmount','dividendCurrency','taxPaid','exchangeRate','companyName'];
   const rows = transactions.map(t => headers.map(h => {
     let val = t[h];
     if (val == null) return '';

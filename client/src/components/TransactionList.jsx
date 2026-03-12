@@ -4,7 +4,7 @@ import { api } from '../lib/api';
 import EditModal from './EditModal';
 
 function hasUSD(t) {
-  if (t.type === 'dividend') return t.amountCurrency === 'USD';
+  if (t.type === 'dividend') return t.dividendCurrency === 'USD';
   return t.priceCurrency === 'USD' || t.commissionCurrency === 'USD';
 }
 
@@ -111,7 +111,7 @@ export default function TransactionList({ transactions, onDelete, onEdit }) {
             <td>{t.type === 'dividend' ? '—' : t.quantity}</td>
             <td>
               {t.type === 'dividend'
-                ? (t.amountCurrency === 'USD' ? formatUSD(t.amount) : formatEUR(t.amount))
+                ? (t.dividendCurrency === 'USD' ? formatUSD(t.dividendAmount) : formatEUR(t.dividendAmount))
                 : (t.priceCurrency === 'USD' ? formatUSD(t.pricePerShare) : formatEUR(t.pricePerShare))}
             </td>
             <td>

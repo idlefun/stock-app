@@ -106,7 +106,7 @@ export default function CsvImport({ onImport }) {
         <details>
           <summary>CSV Format</summary>
           <p>Buy/Sell columns: <code>type, ticker, date, quantity, pricePerShare, priceCurrency, commission, commissionCurrency, exchangeRate, companyName</code></p>
-          <p>Dividend columns: <code>type, ticker, date, amount, amountCurrency, taxPaid, exchangeRate</code></p>
+          <p>Dividend columns: <code>type, ticker, date, dividendAmount, dividendCurrency, taxPaid, exchangeRate</code></p>
           <p>Date format: <code>dd/mm/yyyy</code> (e.g. 15/03/2025). YYYY-MM-DD also accepted.</p>
           <p>Mixed types can share all columns — unused fields are ignored.</p>
         </details>
