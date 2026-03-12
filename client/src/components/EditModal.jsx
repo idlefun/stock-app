@@ -202,7 +202,7 @@ export default function EditModal({ transaction, onSave, onCancel }) {
             <label className="input-pair">
               Price
               <div className="pair-row">
-                <input type="number" step="0.01" min="0" value={form.pricePerShare} onChange={e => set('pricePerShare', e.target.value)} required />
+                <input type="number" step="0.0001" min="0" value={form.pricePerShare} onChange={e => set('pricePerShare', e.target.value)} required />
                 <select value={form.priceCurrency} onChange={e => set('priceCurrency', e.target.value)}>
                   <option value="USD">USD</option>
                   <option value="EUR">EUR</option>
