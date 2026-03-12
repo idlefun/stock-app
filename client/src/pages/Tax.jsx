@@ -128,22 +128,11 @@ export default function Tax() {
               <span className="secondary">Taxable: {formatEUR(data.expected.stockTaxableGain)}</span>
               <span className="secondary">(after {formatEUR(data.expected.cgtExemption)} exemption)</span>
             </div>
-            <div className="summary-card">
-              <span className="label">Expected Stock CGT</span>
-              <span className="value">{formatEUR(data.expected.stockCgt)}</span>
-              <span className="secondary">@ {(data.expected.cgtRate * 100).toFixed(0)}% on {formatEUR(data.expected.stockTaxableGain)}</span>
-            </div>
-
-            {/* ETF Exit Tax */}
+            {/* ETF Capital Gains */}
             <div className={`summary-card ${(data.totals.etfGainEUR || 0) >= 0 ? 'positive' : 'negative'}`}>
               <span className="label">ETF Capital Gains</span>
               <span className="value">{formatEUR(data.totals.etfGainEUR)}</span>
               <span className="secondary">No exemption</span>
-            </div>
-            <div className="summary-card">
-              <span className="label">Expected ETF Exit Tax</span>
-              <span className="value">{formatEUR(data.expected.etfTax)}</span>
-              <span className="secondary">@ {(data.expected.etfTaxRate * 100).toFixed(0)}% on {formatEUR(data.expected.etfTaxableGain)}</span>
             </div>
 
             {/* Expected Total + Tax Paid */}
