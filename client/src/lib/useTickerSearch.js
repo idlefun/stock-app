@@ -32,7 +32,7 @@ export function useTickerSearch(ticker, enabled = true) {
 
   function selectTicker(result) {
     setShowDropdown(false);
-    setSearchResults([]);
+    setSearchResults([result]);
     return result.ticker;
   }
 
