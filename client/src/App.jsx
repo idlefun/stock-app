@@ -12,7 +12,7 @@ function App() {
     <BrowserRouter>
       <div className="app">
         <header className="app-header">
-          <h1>Stock Portfolio Tracker</h1>
+          <h1>Aisling is cool</h1>
           <nav>
             <NavLink to="/" end>Dashboard</NavLink>
             <NavLink to="/transactions">Transactions</NavLink>
