@@ -95,6 +95,11 @@ export default function Tax() {
               <span className="secondary">@ {(data.expected.dividendTaxRate * 100).toFixed(0)}% on {formatEUR(data.totals.divGrossEUR)}</span>
               {data.totals.divTaxPaid > 0 && <span className="secondary">WHT credit {formatEUR(data.totals.divTaxPaid)}</span>}
             </div>
+            <div className="summary-card">
+              <span className="label">Dividend Tax Paid</span>
+              <span className="value">{formatEUR(data.totals.divTaxPaid)}</span>
+              <span className="secondary">WHT at source</span>
+            </div>
           </div>
 
           <h3>Sales ({data.sales.length})</h3>
