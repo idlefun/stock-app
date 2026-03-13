@@ -40,6 +40,11 @@ function buildHoldings(transactions) {
   return holdings;
 }
 
+function toEUR(amount, currency, rate) {
+  if (currency === 'EUR') return amount;
+  return amount / rate;
+}
+
 function calcStockSummary(holding, eurToUsd, splits) {
   const { ticker, buys, sells, dividends } = holding;
 
@@ -48,58 +53,76 @@ function calcStockSummary(holding, eurToUsd, splits) {
 
   let totalAdjQty = 0;
   let totalCostUSD = 0;
+  let totalCostEUR = 0;
   let realizedGainUSD = 0;
-  let totalInvestedUSD = 0; // total ever spent on buys (for overall return calc)
+  let realizedGainEUR = 0;
+  let totalInvestedUSD = 0;
+  let totalInvestedEUR = 0;
 
   for (const t of allTxns) {
     const mult = splitMultiplier(splits, t.date);
     const adjQty = t.quantity * mult;
+    const rate = t.exchangeRate || eurToUsd;
     const txnValueUSD = convertToUSD(t.pricePerShare * t.quantity, t.priceCurrency, eurToUsd);
     const txnCommUSD = convertToUSD(t.commission, t.commissionCurrency, eurToUsd);
+    const txnValueEUR = toEUR(t.pricePerShare * t.quantity, t.priceCurrency, rate);
+    const txnCommEUR = t.commission > 0 ? toEUR(t.commission, t.commissionCurrency, rate) : 0;
 
     if (t.type === 'buy') {
       totalCostUSD += txnValueUSD + txnCommUSD;
+      totalCostEUR += txnValueEUR + txnCommEUR;
       totalAdjQty += adjQty;
       totalInvestedUSD += txnValueUSD + txnCommUSD;
+      totalInvestedEUR += txnValueEUR + txnCommEUR;
     } else {
-      const avgCost = totalAdjQty > 0 ? totalCostUSD / totalAdjQty : 0;
-      const costBasis = avgCost * adjQty;
-      const proceeds = txnValueUSD - txnCommUSD;
-      realizedGainUSD += proceeds - costBasis;
-      totalCostUSD -= costBasis;
+      const avgCostUSD = totalAdjQty > 0 ? totalCostUSD / totalAdjQty : 0;
+      const avgCostEUR = totalAdjQty > 0 ? totalCostEUR / totalAdjQty : 0;
+      const costBasisUSD = avgCostUSD * adjQty;
+      const costBasisEUR = avgCostEUR * adjQty;
+      const proceedsUSD = txnValueUSD - txnCommUSD;
+      const proceedsEUR = txnValueEUR - txnCommEUR;
+      realizedGainUSD += proceedsUSD - costBasisUSD;
+      realizedGainEUR += proceedsEUR - costBasisEUR;
+      totalCostUSD -= costBasisUSD;
+      totalCostEUR -= costBasisEUR;
       totalAdjQty -= adjQty;
     }
   }
 
-  // Sum dividends (net of tax)
+  // Sum dividends (net of tax) using per-transaction rates
   let dividendsUSD = 0;
+  let dividendsEUR = 0;
   let taxPaidEUR = 0;
   for (const d of dividends) {
+    const rate = d.exchangeRate || eurToUsd;
     dividendsUSD += convertToUSD(d.dividendAmount, d.dividendCurrency, eurToUsd);
+    dividendsEUR += toEUR(d.dividendAmount, d.dividendCurrency, rate);
     taxPaidEUR += d.taxPaid || 0;
   }
   const taxPaidUSD = convertToUSD(taxPaidEUR, 'EUR', eurToUsd);
   const netDividendsUSD = dividendsUSD - taxPaidUSD;
+  const netDividendsEUR = dividendsEUR - taxPaidEUR;
 
   const avgCostPerShareUSD = totalAdjQty > 0 ? totalCostUSD / totalAdjQty : 0;
+  const avgCostPerShareEUR = totalAdjQty > 0 ? totalCostEUR / totalAdjQty : 0;
 
   return {
     ticker,
     quantityHeld: totalAdjQty,
-    totalCostUSD: totalCostUSD,
-    totalCostEUR: convertToEUR(totalCostUSD, 'USD', eurToUsd),
+    totalCostUSD,
+    totalCostEUR,
     avgCostPerShareUSD,
-    avgCostPerShareEUR: convertToEUR(avgCostPerShareUSD, 'USD', eurToUsd),
+    avgCostPerShareEUR,
     realizedGainUSD,
-    realizedGainEUR: convertToEUR(realizedGainUSD, 'USD', eurToUsd),
+    realizedGainEUR,
     dividendsUSD,
-    dividendsEUR: convertToEUR(dividendsUSD, 'USD', eurToUsd),
+    dividendsEUR,
     taxPaidEUR,
     taxPaidUSD,
     netDividendsUSD,
-    netDividendsEUR: convertToEUR(netDividendsUSD, 'USD', eurToUsd),
+    netDividendsEUR,
     totalInvestedUSD,
-    totalInvestedEUR: convertToEUR(totalInvestedUSD, 'USD', eurToUsd),
+    totalInvestedEUR,
   };
 }
 
@@ -131,12 +154,18 @@ router.get('/', async (req, res) => {
 
     const stocks = [];
     let totalCostUSD = 0;
+    let totalCostEUR = 0;
     let totalValueUSD = 0;
+    let totalValueEUR = 0;
     let totalRealizedUSD = 0;
+    let totalRealizedEUR = 0;
     let totalDividendsUSD = 0;
+    let totalDividendsEUR = 0;
     let totalTaxPaidEUR = 0;
     let totalNetDividendsUSD = 0;
+    let totalNetDividendsEUR = 0;
     let totalInvestedUSD = 0;
+    let totalInvestedEUR = 0;
 
     for (const [ticker, holding] of Object.entries(holdings)) {
       const splits = splitsMap[ticker];
@@ -165,13 +194,18 @@ router.get('/', async (req, res) => {
       const currentValueUSD = currentPrice && summary.quantityHeld > 0
         ? convertToUSD(currentPrice, priceCurrency, eurToUsd) * summary.quantityHeld
         : null;
+      const currentValueEUR = currentPrice && summary.quantityHeld > 0
+        ? convertToEUR(currentPrice, priceCurrency, eurToUsd) * summary.quantityHeld
+        : null;
 
       // Unrealized gain on current holdings
       const unrealizedUSD = currentValueUSD !== null ? currentValueUSD - summary.totalCostUSD : null;
-      // Total gain = realized + unrealized + net dividends
+      const unrealizedEUR = currentValueEUR !== null ? currentValueEUR - summary.totalCostEUR : null;
+      // Total gain = realized + unrealized + net dividends (EUR uses per-transaction rates)
       const totalGainUSD = summary.realizedGainUSD + (unrealizedUSD || 0) + summary.netDividendsUSD;
-      const totalPct = summary.totalInvestedUSD > 0
-        ? (totalGainUSD / summary.totalInvestedUSD) * 100
+      const totalGainEUR = summary.realizedGainEUR + (unrealizedEUR || 0) + summary.netDividendsEUR;
+      const totalPct = summary.totalInvestedEUR > 0
+        ? (totalGainEUR / summary.totalInvestedEUR) * 100
         : null;
 
       const stock = {
@@ -185,9 +219,9 @@ router.get('/', async (req, res) => {
         priceCurrency,
         currentPriceEUR: currentPrice ? convertToEUR(currentPrice, priceCurrency, eurToUsd) : null,
         currentValueUSD,
-        currentValueEUR: currentValueUSD !== null ? convertToEUR(currentValueUSD, 'USD', eurToUsd) : null,
+        currentValueEUR,
         unrealizedUSD,
-        unrealizedEUR: unrealizedUSD !== null ? convertToEUR(unrealizedUSD, 'USD', eurToUsd) : null,
+        unrealizedEUR,
         realizedUSD: summary.realizedGainUSD,
         realizedEUR: summary.realizedGainEUR,
         dividendsUSD: summary.dividendsUSD,
@@ -197,7 +231,7 @@ router.get('/', async (req, res) => {
         netDividendsUSD: summary.netDividendsUSD,
         netDividendsEUR: summary.netDividendsEUR,
         totalGainUSD,
-        totalGainEUR: convertToEUR(totalGainUSD, 'USD', eurToUsd),
+        totalGainEUR,
         totalInvestedUSD: summary.totalInvestedUSD,
         totalInvestedEUR: summary.totalInvestedEUR,
         pctChange: totalPct,
@@ -213,13 +247,19 @@ router.get('/', async (req, res) => {
 
       stocks.push(stock);
       totalInvestedUSD += summary.totalInvestedUSD;
+      totalInvestedEUR += summary.totalInvestedEUR;
       totalRealizedUSD += summary.realizedGainUSD;
+      totalRealizedEUR += summary.realizedGainEUR;
       totalDividendsUSD += summary.dividendsUSD;
+      totalDividendsEUR += summary.dividendsEUR;
       totalTaxPaidEUR += summary.taxPaidEUR;
       totalNetDividendsUSD += summary.netDividendsUSD;
+      totalNetDividendsEUR += summary.netDividendsEUR;
       if (summary.quantityHeld > 0) {
         totalCostUSD += summary.totalCostUSD;
+        totalCostEUR += summary.totalCostEUR;
         if (currentValueUSD !== null) totalValueUSD += currentValueUSD;
+        if (currentValueEUR !== null) totalValueEUR += currentValueEUR;
       }
     }
 
@@ -282,32 +322,34 @@ router.get('/', async (req, res) => {
     }
 
     const totalUnrealizedUSD = totalValueUSD - totalCostUSD;
+    const totalUnrealizedEUR = totalValueEUR - totalCostEUR;
     const totalGainUSD = totalRealizedUSD + totalUnrealizedUSD + totalNetDividendsUSD;
-    const totalPctChange = totalInvestedUSD > 0 ? (totalGainUSD / totalInvestedUSD) * 100 : 0;
+    const totalGainEUR = totalRealizedEUR + totalUnrealizedEUR + totalNetDividendsEUR;
+    const totalPctChange = totalInvestedEUR > 0 ? (totalGainEUR / totalInvestedEUR) * 100 : 0;
 
     res.json({
       stocks,
       totals: {
         totalInvestedUSD,
-        totalInvestedEUR: convertToEUR(totalInvestedUSD, 'USD', eurToUsd),
+        totalInvestedEUR,
         holdingsCostUSD: totalCostUSD,
-        holdingsCostEUR: convertToEUR(totalCostUSD, 'USD', eurToUsd),
+        holdingsCostEUR: totalCostEUR,
         holdingsValueUSD: totalValueUSD,
-        holdingsValueEUR: convertToEUR(totalValueUSD, 'USD', eurToUsd),
+        holdingsValueEUR: totalValueEUR,
         unrealizedUSD: totalUnrealizedUSD,
-        unrealizedEUR: convertToEUR(totalUnrealizedUSD, 'USD', eurToUsd),
+        unrealizedEUR: totalUnrealizedEUR,
         realizedUSD: totalRealizedUSD,
-        realizedEUR: convertToEUR(totalRealizedUSD, 'USD', eurToUsd),
+        realizedEUR: totalRealizedEUR,
         dividendsUSD: totalDividendsUSD,
-        dividendsEUR: convertToEUR(totalDividendsUSD, 'USD', eurToUsd),
+        dividendsEUR: totalDividendsEUR,
         taxPaidEUR: totalTaxPaidEUR,
         taxPaidUSD: convertToUSD(totalTaxPaidEUR, 'EUR', eurToUsd),
         netDividendsUSD: totalNetDividendsUSD,
-        netDividendsEUR: convertToEUR(totalNetDividendsUSD, 'USD', eurToUsd),
-        totalGainUSD: totalGainUSD,
-        totalGainEUR: convertToEUR(totalGainUSD, 'USD', eurToUsd),
+        netDividendsEUR: totalNetDividendsEUR,
+        totalGainUSD,
+        totalGainEUR,
         cgtPaidEUR: totalCgtPaidEUR,
-        totalGainAfterTaxEUR: convertToEUR(totalGainUSD, 'USD', eurToUsd) - totalCgtPaidEUR,
+        totalGainAfterTaxEUR: totalGainEUR - totalCgtPaidEUR,
         pctChange: totalPctChange,
       },
       exchangeRate: { eurToUsd, stale: rateStale },
@@ -398,6 +440,7 @@ router.get('/:ticker', async (req, res) => {
     // Current holding summary
     await loadPriceCache();
     let currentPrice = null;
+    let priceCurrency = 'USD';
     const txnName = tickerTxns.find(t => t.companyName)?.companyName;
     let name = txnName || ticker;
     let priceStale = false;
@@ -405,14 +448,21 @@ router.get('/:ticker', async (req, res) => {
     try {
       const priceData = await getPrice(ticker);
       currentPrice = priceData.price;
+      priceCurrency = priceData.currency || 'USD';
       name = priceData.name || name;
       priceStale = priceData.stale || false;
     } catch {
       priceStale = true;
     }
 
-    const currentValueUSD = currentPrice && summary.quantityHeld > 0 ? currentPrice * summary.quantityHeld : null;
+    const currentValueUSD = currentPrice && summary.quantityHeld > 0
+      ? convertToUSD(currentPrice, priceCurrency, eurToUsd) * summary.quantityHeld
+      : null;
+    const currentValueEUR = currentPrice && summary.quantityHeld > 0
+      ? convertToEUR(currentPrice, priceCurrency, eurToUsd) * summary.quantityHeld
+      : null;
     const unrealizedUSD = currentValueUSD !== null ? currentValueUSD - summary.totalCostUSD : null;
+    const unrealizedEURVal = currentValueEUR !== null ? currentValueEUR - summary.totalCostEUR : null;
 
     // Calculate allocated CGT for this stock across all years
     const taxPaidData = loadTaxPaid();
@@ -470,10 +520,9 @@ router.get('/:ticker', async (req, res) => {
     }
 
     const totalProfitUSD = summary.realizedGainUSD + (unrealizedUSD || 0) + summary.netDividendsUSD;
-    const unrealizedEUR = unrealizedUSD !== null ? convertToEUR(unrealizedUSD, 'USD', eurToUsd) : 0;
-    const totalProfitEUR = totalRealizedEUR + unrealizedEUR + totalDividendsEUR;
+    const totalProfitEUR = totalRealizedEUR + (unrealizedEURVal || 0) + totalDividendsEUR;
     const totalProfitAfterTaxEUR = totalProfitEUR - allocatedTaxEUR;
-    const pctReturn = summary.totalInvestedUSD > 0 ? (totalProfitUSD / summary.totalInvestedUSD) * 100 : null;
+    const pctReturn = summary.totalInvestedEUR > 0 ? (totalProfitEUR / summary.totalInvestedEUR) * 100 : null;
 
     // Filter splits for closed positions
     const responseSplits = summary.quantityHeld === 0 && holding.sells.length > 0
@@ -489,15 +538,16 @@ router.get('/:ticker', async (req, res) => {
       quantityHeld: summary.quantityHeld,
       avgCostPerShareUSD: summary.avgCostPerShareUSD,
       avgCostPerShareEUR: summary.avgCostPerShareEUR,
-      currentPriceUSD: currentPrice,
-      currentPriceEUR: currentPrice ? convertToEUR(currentPrice, 'USD', eurToUsd) : null,
+      currentPriceUSD: currentPrice ? convertToUSD(currentPrice, priceCurrency, eurToUsd) : null,
+      currentPriceEUR: currentPrice ? convertToEUR(currentPrice, priceCurrency, eurToUsd) : null,
+      priceCurrency,
       priceStale,
       splits: responseSplits,
       transactions: detail,
       realizedUSD: summary.realizedGainUSD,
       realizedEUR: summary.realizedGainEUR,
       unrealizedUSD,
-      unrealizedEUR: unrealizedUSD !== null ? convertToEUR(unrealizedUSD, 'USD', eurToUsd) : null,
+      unrealizedEUR: unrealizedEURVal,
       netDividendsUSD: summary.netDividendsUSD,
       netDividendsEUR: summary.netDividendsEUR,
       totalProfitUSD,
