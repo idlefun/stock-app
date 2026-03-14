@@ -394,6 +394,11 @@ router.get('/:ticker', async (req, res) => {
     let runningCostEUR = 0;
     let totalRealizedEUR = 0;
     let totalDividendsEUR = 0;
+    let totalDividendsGrossEUR = 0;
+    let totalDividendsTaxEUR = 0;
+    let totalPurchasesEUR = 0;
+    let totalSalesProceedsEUR = 0;
+    let totalSalesGainEUR = 0;
 
     const toEUR = (amount, currency, rate) => currency === 'EUR' ? amount : amount / rate;
 
@@ -402,8 +407,11 @@ router.get('/:ticker', async (req, res) => {
 
       if (t.type === 'dividend') {
         const grossEUR = toEUR(t.dividendAmount, t.dividendCurrency, txnRate);
-        const netEUR = grossEUR - (t.taxPaid || 0);
+        const taxEUR = t.taxPaid || 0;
+        const netEUR = grossEUR - taxEUR;
         totalDividendsEUR += netEUR;
+        totalDividendsGrossEUR += grossEUR;
+        totalDividendsTaxEUR += taxEUR;
         detail.push({ ...t, splitMultiplier: 1, adjustedQuantity: 0, adjustedPricePerShare: 0, realizedGainLossUSD: null, realizedGainLossEUR: null });
         continue;
       }
@@ -419,6 +427,7 @@ router.get('/:ticker', async (req, res) => {
         runningCostUSD += txnCostUSD + txnCommUSD;
         runningCostEUR += txnCostEUR + txnCommEUR;
         runningAdjQty += adjQty;
+        totalPurchasesEUR += txnCostEUR + txnCommEUR;
         detail.push({ ...t, splitMultiplier: mult, adjustedQuantity: adjQty, adjustedPricePerShare: adjPricePerShare, realizedGainLossUSD: null, realizedGainLossEUR: null });
       } else {
         const avgCostUSD = runningAdjQty > 0 ? runningCostUSD / runningAdjQty : 0;
@@ -433,6 +442,8 @@ router.get('/:ticker', async (req, res) => {
         runningCostEUR -= costBasisEUR;
         runningAdjQty -= adjQty;
         totalRealizedEUR += realizedEUR;
+        totalSalesProceedsEUR += proceedsEUR;
+        totalSalesGainEUR += realizedEUR;
         detail.push({ ...t, splitMultiplier: mult, adjustedQuantity: adjQty, adjustedPricePerShare: adjPricePerShare, realizedGainLossUSD: realizedUSD, realizedGainLossEUR: realizedEUR });
       }
     }
@@ -550,6 +561,13 @@ router.get('/:ticker', async (req, res) => {
       unrealizedEUR: unrealizedEURVal,
       netDividendsUSD: summary.netDividendsUSD,
       netDividendsEUR: summary.netDividendsEUR,
+      totalPurchasesEUR,
+      totalSalesProceedsEUR,
+      totalSalesGainEUR,
+      totalSalesAfterTaxEUR: totalSalesProceedsEUR - allocatedTaxEUR,
+      totalDividendsGrossEUR,
+      totalDividendsTaxEUR,
+      totalDividendsNetEUR: totalDividendsGrossEUR - totalDividendsTaxEUR,
       totalProfitUSD,
       totalProfitEUR,
       allocatedTaxEUR,

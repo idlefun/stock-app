@@ -70,6 +70,33 @@ export default function StockDetail() {
         )}
       </div>
 
+      <div className="detail-summary">
+        <div className="summary-card">
+          <span className="label">Total Purchases</span>
+          <span className="value">{formatEUR(detail.totalPurchasesEUR)}</span>
+        </div>
+        {detail.totalSalesProceedsEUR > 0 && (
+          <div className="summary-card">
+            <span className="label">Total Sales</span>
+            <span className="value">{formatEUR(detail.totalSalesProceedsEUR)}</span>
+            <span className={`value secondary ${detail.totalSalesGainEUR >= 0 ? 'positive' : 'negative'}`}>gain: {formatEUR(detail.totalSalesGainEUR)}</span>
+            {detail.allocatedTaxEUR > 0 && <span className="value secondary">after tax: {formatEUR(detail.totalSalesAfterTaxEUR)}</span>}
+          </div>
+        )}
+        {detail.totalDividendsGrossEUR > 0 && (
+          <div className="summary-card">
+            <span className="label">Total Dividends</span>
+            <span className="value">{formatEUR(detail.totalDividendsGrossEUR)}</span>
+            {detail.totalDividendsTaxEUR > 0 && (
+              <>
+                <span className="value secondary">WHT: {formatEUR(detail.totalDividendsTaxEUR)}</span>
+                <span className="value secondary">after tax: {formatEUR(detail.totalDividendsNetEUR)}</span>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
       {hasSplits && (
         <div className="splits-info">
           <h3>Stock Splits</h3>
