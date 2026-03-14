@@ -45,6 +45,46 @@ function toEUR(amount, currency, rate) {
   return amount / rate;
 }
 
+// Compute sell gains by year by ticker using FIFO cost basis (matches tax.js)
+function computeGainsByYear(holdings, splitsMap, eurToUsd) {
+  const gainsByYear = {}; // { year: { ticker: gainEUR } }
+  for (const [ticker, holding] of Object.entries(holdings)) {
+    const splits = splitsMap[ticker] || [];
+    const buySells = [...holding.buys, ...holding.sells]
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+    const buyLots = []; // FIFO queue: { adjQty, costPerShareEUR }
+    for (const t of buySells) {
+      const rate = t.exchangeRate || eurToUsd;
+      const mult = splitMultiplier(splits, t.date);
+      const adjQty = t.quantity * mult;
+      const toE = (amt, cur) => cur === 'EUR' ? amt : amt / rate;
+      if (t.type === 'buy') {
+        const costEUR = toE(t.pricePerShare * t.quantity, t.priceCurrency) +
+          (t.commission > 0 ? toE(t.commission, t.commissionCurrency) : 0);
+        buyLots.push({ adjQty, costPerShareEUR: costEUR / adjQty });
+      } else {
+        let remaining = adjQty;
+        let costBasis = 0;
+        while (remaining > 0 && buyLots.length > 0) {
+          const lot = buyLots[0];
+          const used = Math.min(remaining, lot.adjQty);
+          costBasis += used * lot.costPerShareEUR;
+          lot.adjQty -= used;
+          remaining -= used;
+          if (lot.adjQty <= 0) buyLots.shift();
+        }
+        const proceeds = toE(t.pricePerShare * t.quantity, t.priceCurrency) -
+          (t.commission > 0 ? toE(t.commission, t.commissionCurrency) : 0);
+        const gain = proceeds - costBasis;
+        const yr = t.date.substring(0, 4);
+        if (!gainsByYear[yr]) gainsByYear[yr] = {};
+        gainsByYear[yr][ticker] = (gainsByYear[yr][ticker] || 0) + gain;
+      }
+    }
+  }
+  return gainsByYear;
+}
+
 function calcStockSummary(holding, eurToUsd, splits) {
   const { ticker, buys, sells, dividends } = holding;
 
@@ -263,40 +303,11 @@ router.get('/', async (req, res) => {
       }
     }
 
-    // Compute per-ticker allocated CGT using avg cost basis
+    // Compute per-ticker allocated CGT using FIFO cost basis (matches tax page)
     const taxPaidData = loadTaxPaid();
     const totalCgtPaidEUR = Object.values(taxPaidData).reduce((sum, v) => sum + (Number(v) || 0), 0);
 
-    // Compute sell gains by year by ticker for proportional tax allocation
-    const gainsByYear = {}; // { year: { ticker: gainEUR } }
-    for (const [ticker, holding] of Object.entries(holdings)) {
-      const splits = splitsMap[ticker];
-      const buySells = [...holding.buys, ...holding.sells]
-        .sort((a, b) => new Date(a.date) - new Date(b.date));
-      let qty = 0, costEUR = 0;
-      for (const t of buySells) {
-        const rate = t.exchangeRate || eurToUsd;
-        const mult = splitMultiplier(splits, t.date);
-        const adjQty = t.quantity * mult;
-        const toE = (amt, cur) => cur === 'EUR' ? amt : amt / rate;
-        if (t.type === 'buy') {
-          costEUR += toE(t.pricePerShare * t.quantity, t.priceCurrency) +
-            (t.commission > 0 ? toE(t.commission, t.commissionCurrency) : 0);
-          qty += adjQty;
-        } else {
-          const avg = qty > 0 ? costEUR / qty : 0;
-          const basis = avg * adjQty;
-          const proceeds = toE(t.pricePerShare * t.quantity, t.priceCurrency) -
-            (t.commission > 0 ? toE(t.commission, t.commissionCurrency) : 0);
-          const gain = proceeds - basis;
-          costEUR -= basis;
-          qty -= adjQty;
-          const yr = t.date.substring(0, 4);
-          if (!gainsByYear[yr]) gainsByYear[yr] = {};
-          gainsByYear[yr][ticker] = (gainsByYear[yr][ticker] || 0) + gain;
-        }
-      }
-    }
+    const gainsByYear = computeGainsByYear(holdings, splitsMap, eurToUsd);
 
     // Allocate tax paid to each ticker proportionally per year
     const allocatedTaxByTicker = {};
@@ -475,47 +486,16 @@ router.get('/:ticker', async (req, res) => {
     const unrealizedUSD = currentValueUSD !== null ? currentValueUSD - summary.totalCostUSD : null;
     const unrealizedEURVal = currentValueEUR !== null ? currentValueEUR - summary.totalCostEUR : null;
 
-    // Calculate allocated CGT for this stock across all years
+    // Calculate allocated CGT for this stock across all years using FIFO (matches tax page)
     const taxPaidData = loadTaxPaid();
 
-    // Compute per-year gains for ALL stocks using avg cost basis
-    const allTxnsByTicker = {};
-    for (const t of transactions) {
-      if (!allTxnsByTicker[t.ticker]) allTxnsByTicker[t.ticker] = [];
-      allTxnsByTicker[t.ticker].push(t);
+    // Build holdings for all tickers to compute gains-by-year
+    const allHoldings = buildHoldings(transactions);
+    const allSplitsMap = {};
+    for (const tk of Object.keys(allHoldings)) {
+      try { allSplitsMap[tk] = await getSplits(tk); } catch { allSplitsMap[tk] = []; }
     }
-
-    // For each ticker, compute sell gains by year
-    const gainsByYear = {}; // { year: { ticker: gainEUR } }
-    for (const [tk, txns] of Object.entries(allTxnsByTicker)) {
-      let tkSplits = [];
-      try { tkSplits = await getSplits(tk); } catch {}
-      const buySells = txns.filter(t => t.type === 'buy' || t.type === 'sell')
-        .sort((a, b) => new Date(a.date) - new Date(b.date));
-      let qty = 0, costEUR = 0;
-      for (const t of buySells) {
-        const rate = t.exchangeRate || eurToUsd;
-        const mult = splitMultiplier(tkSplits, t.date);
-        const adjQty = t.quantity * mult;
-        const toEUR = (amt, cur) => cur === 'EUR' ? amt : amt / rate;
-        if (t.type === 'buy') {
-          costEUR += toEUR(t.pricePerShare * t.quantity, t.priceCurrency) +
-            (t.commission > 0 ? toEUR(t.commission, t.commissionCurrency) : 0);
-          qty += adjQty;
-        } else {
-          const avg = qty > 0 ? costEUR / qty : 0;
-          const basis = avg * adjQty;
-          const proceeds = toEUR(t.pricePerShare * t.quantity, t.priceCurrency) -
-            (t.commission > 0 ? toEUR(t.commission, t.commissionCurrency) : 0);
-          const gain = proceeds - basis;
-          costEUR -= basis;
-          qty -= adjQty;
-          const yr = t.date.substring(0, 4);
-          if (!gainsByYear[yr]) gainsByYear[yr] = {};
-          gainsByYear[yr][tk] = (gainsByYear[yr][tk] || 0) + gain;
-        }
-      }
-    }
+    const gainsByYear = computeGainsByYear(allHoldings, allSplitsMap, eurToUsd);
 
     // Allocate tax paid to this ticker proportionally per year
     let allocatedTaxEUR = 0;
