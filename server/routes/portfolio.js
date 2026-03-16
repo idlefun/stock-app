@@ -85,6 +85,54 @@ function computeGainsByYear(holdings, splitsMap, eurToUsd) {
   return gainsByYear;
 }
 
+// Compute expected tax per ticker, separating stocks (33% CGT, €1,270 exemption) from ETFs (41%, no exemption)
+function computeAllocatedTax(gainsByYear, assetTypes) {
+  const CGT_RATE = 0.33;
+  const CGT_EXEMPTION = 1270;
+  const ETF_TAX_RATE = 0.41;
+  const allocated = {};
+
+  for (const [yr, tickerGains] of Object.entries(gainsByYear)) {
+    let totalStockGain = 0;
+    let totalEtfGain = 0;
+    for (const [tk, gain] of Object.entries(tickerGains)) {
+      if (gain <= 0) continue;
+      if (assetTypes[tk] === 'etf') {
+        totalEtfGain += gain;
+      } else {
+        totalStockGain += gain;
+      }
+    }
+
+    // Stock CGT: 33% after €1,270 exemption
+    const stockTaxable = Math.max(0, totalStockGain - CGT_EXEMPTION);
+    const totalStockCGT = stockTaxable * CGT_RATE;
+
+    // ETF exit tax: 41%, no exemption
+    const totalEtfTax = totalEtfGain * ETF_TAX_RATE;
+
+    // Allocate stock CGT proportionally among stocks
+    if (totalStockCGT > 0 && totalStockGain > 0) {
+      for (const [tk, gain] of Object.entries(tickerGains)) {
+        if (gain > 0 && assetTypes[tk] !== 'etf') {
+          allocated[tk] = (allocated[tk] || 0) + (gain / totalStockGain) * totalStockCGT;
+        }
+      }
+    }
+
+    // Allocate ETF tax proportionally among ETFs
+    if (totalEtfTax > 0 && totalEtfGain > 0) {
+      for (const [tk, gain] of Object.entries(tickerGains)) {
+        if (gain > 0 && assetTypes[tk] === 'etf') {
+          allocated[tk] = (allocated[tk] || 0) + (gain / totalEtfGain) * totalEtfTax;
+        }
+      }
+    }
+  }
+
+  return allocated;
+}
+
 function calcStockSummary(holding, eurToUsd, splits) {
   const { ticker, buys, sells, dividends } = holding;
 
@@ -303,25 +351,20 @@ router.get('/', async (req, res) => {
       }
     }
 
-    // Compute per-ticker allocated CGT using FIFO cost basis (matches tax page)
+    // Compute per-ticker expected tax using FIFO, separating stocks from ETFs
     const taxPaidData = loadTaxPaid();
     const totalCgtPaidEUR = Object.values(taxPaidData).reduce((sum, v) => sum + (Number(v) || 0), 0);
 
     const gainsByYear = computeGainsByYear(holdings, splitsMap, eurToUsd);
 
-    // Allocate tax paid to each ticker proportionally per year
-    const allocatedTaxByTicker = {};
-    for (const [yr, tickerGains] of Object.entries(gainsByYear)) {
-      const cgtPaid = taxPaidData[yr] || 0;
-      if (cgtPaid <= 0) continue;
-      const totalPositiveGains = Object.values(tickerGains).filter(g => g > 0).reduce((s, g) => s + g, 0);
-      if (totalPositiveGains <= 0) continue;
-      for (const [tk, gain] of Object.entries(tickerGains)) {
-        if (gain > 0) {
-          allocatedTaxByTicker[tk] = (allocatedTaxByTicker[tk] || 0) + (gain / totalPositiveGains) * cgtPaid;
-        }
-      }
+    // Build asset type map for all tickers
+    const assetTypes = {};
+    for (const [tk, holding] of Object.entries(holdings)) {
+      const allTkTxns = [...holding.buys, ...holding.sells, ...holding.dividends];
+      assetTypes[tk] = allTkTxns.find(t => t.assetType)?.assetType || 'stock';
     }
+
+    const allocatedTaxByTicker = computeAllocatedTax(gainsByYear, assetTypes);
 
     // Apply allocated tax and allocation percentages to stocks
     for (const stock of stocks) {
@@ -486,10 +529,7 @@ router.get('/:ticker', async (req, res) => {
     const unrealizedUSD = currentValueUSD !== null ? currentValueUSD - summary.totalCostUSD : null;
     const unrealizedEURVal = currentValueEUR !== null ? currentValueEUR - summary.totalCostEUR : null;
 
-    // Calculate allocated CGT for this stock across all years using FIFO (matches tax page)
-    const taxPaidData = loadTaxPaid();
-
-    // Build holdings for all tickers to compute gains-by-year
+    // Calculate expected tax for this stock using FIFO, separating stocks from ETFs
     const allHoldings = buildHoldings(transactions);
     const allSplitsMap = {};
     for (const tk of Object.keys(allHoldings)) {
@@ -497,18 +537,15 @@ router.get('/:ticker', async (req, res) => {
     }
     const gainsByYear = computeGainsByYear(allHoldings, allSplitsMap, eurToUsd);
 
-    // Allocate tax paid to this ticker proportionally per year
-    let allocatedTaxEUR = 0;
-    for (const [yr, tickerGains] of Object.entries(gainsByYear)) {
-      const cgtPaid = taxPaidData[yr] || 0;
-      if (cgtPaid <= 0) continue;
-      const totalPositiveGains = Object.values(tickerGains).filter(g => g > 0).reduce((s, g) => s + g, 0);
-      if (totalPositiveGains <= 0) continue;
-      const thisGain = tickerGains[ticker] || 0;
-      if (thisGain > 0) {
-        allocatedTaxEUR += (thisGain / totalPositiveGains) * cgtPaid;
-      }
+    // Build asset type map
+    const assetTypes = {};
+    for (const [tk, h] of Object.entries(allHoldings)) {
+      const allTkTxns = [...h.buys, ...h.sells, ...h.dividends];
+      assetTypes[tk] = allTkTxns.find(t => t.assetType)?.assetType || 'stock';
     }
+
+    const allAllocatedTax = computeAllocatedTax(gainsByYear, assetTypes);
+    const allocatedTaxEUR = allAllocatedTax[ticker] || 0;
 
     const totalProfitUSD = summary.realizedGainUSD + (unrealizedUSD || 0) + summary.netDividendsUSD;
     const totalProfitEUR = totalRealizedEUR + (unrealizedEURVal || 0) + totalDividendsEUR;
