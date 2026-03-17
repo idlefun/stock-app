@@ -7,21 +7,11 @@ const { getSplits, splitMultiplier, loadCache: loadSplitsCache } = require('./sp
 const { getPrice, loadCache: loadPriceCache } = require('./prices');
 const { createCache } = require('../lib/cache');
 const { getManualPrices } = require('./manualPrices');
-const fs = require('fs');
-const path = require('path');
-
-const taxPaidPath = path.join(__dirname, '..', '..', 'data', 'tax-paid.json');
-function loadTaxPaid() {
-  try { return JSON.parse(fs.readFileSync(taxPaidPath, 'utf8')); } catch { return {}; }
-}
+const { toEUR } = require('../lib/currency');
+const { loadTaxPaid } = require('../lib/taxPaid');
 
 const router = express.Router();
 const histPriceCache = createCache('hist-prices.json', 24 * 60 * 60 * 1000);
-
-function toEUR(amount, currency, rate) {
-  if (currency === 'EUR') return amount;
-  return amount / rate;
-}
 
 async function getHistoricalPrice(ticker, dateStr) {
   const cacheKey = `${ticker}_${dateStr}`;

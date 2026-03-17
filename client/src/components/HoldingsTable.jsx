@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { formatUSD, formatEUR, formatPct } from '../lib/format';
+import { formatEUR, formatCurrency, formatPct, gainClass } from '../lib/format';
 
 const COLUMNS = [
   { key: 'ticker', label: 'Ticker', getValue: s => s.ticker },
@@ -65,7 +65,7 @@ export default function HoldingsTable({ stocks }) {
             <td>
               {s.quantityHeld > 0 && s.currentPrice ? (
                 <>
-                  <div>{s.priceCurrency === 'USD' ? formatUSD(s.currentPrice) : formatEUR(s.currentPrice)}</div>
+                  <div>{formatCurrency(s.currentPrice, s.priceCurrency)}</div>
                   {s.priceStale && <span className="stale-badge">Stale</span>}
                 </>
               ) : '—'}
@@ -73,12 +73,12 @@ export default function HoldingsTable({ stocks }) {
             <td>
               {s.quantityHeld > 0 ? formatEUR(s.currentValueEUR) : '—'}
             </td>
-            <td className={s.unrealizedEUR != null && s.unrealizedEUR >= 0 ? 'positive' : 'negative'}>
+            <td className={s.unrealizedEUR != null ? gainClass(s.unrealizedEUR) : ''}>
               {s.unrealizedEUR != null ? (
                 <div>{formatEUR(s.unrealizedEUR)}</div>
               ) : '—'}
             </td>
-            <td className={s.realizedEUR >= 0 ? 'positive' : 'negative'}>
+            <td className={gainClass(s.realizedEUR)}>
               {s.realizedEUR !== 0 ? (
                 <div>{formatEUR(s.realizedEUR)}</div>
               ) : '—'}
@@ -91,7 +91,7 @@ export default function HoldingsTable({ stocks }) {
                 </>
               ) : '—'}
             </td>
-            <td className={s.totalGainAfterTaxEUR >= 0 ? 'positive' : 'negative'}>
+            <td className={gainClass(s.totalGainAfterTaxEUR)}>
               <div>{formatEUR(s.totalGainAfterTaxEUR)}</div>
               <div>{formatPct(s.pctChange)}</div>
             </td>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../lib/api';
-import { formatUSD, formatEUR, formatPct, formatDate, calcTotalCostEUR } from '../lib/format';
+import { formatEUR, formatCurrency, formatPct, formatDate, calcTotalCostEUR, gainClass } from '../lib/format';
 import EditModal from '../components/EditModal';
 
 export default function StockDetail() {
@@ -54,7 +54,7 @@ export default function StockDetail() {
           <span className="value">{formatEUR(detail.currentPriceEUR)}</span>
           {detail.priceStale && <span className="stale-badge">Stale</span>}
         </div>
-        <div className={`summary-card ${detail.totalProfitEUR >= 0 ? 'positive' : 'negative'}`}>
+        <div className={`summary-card ${gainClass(detail.totalProfitEUR)}`}>
           <span className="label">Total Profit (incl. dividends)</span>
           <span className="value">
             {formatEUR(detail.totalProfitEUR)}
@@ -62,7 +62,7 @@ export default function StockDetail() {
           </span>
         </div>
         {detail.allocatedTaxEUR > 0 && (
-          <div className={`summary-card ${detail.totalProfitAfterTaxEUR >= 0 ? 'positive' : 'negative'}`}>
+          <div className={`summary-card ${gainClass(detail.totalProfitAfterTaxEUR)}`}>
             <span className="label">Profit After Tax</span>
             <span className="value">{formatEUR(detail.totalProfitAfterTaxEUR)}</span>
             <span className="value secondary">CGT allocated: {formatEUR(detail.allocatedTaxEUR)}</span>
@@ -79,7 +79,7 @@ export default function StockDetail() {
           <div className="summary-card">
             <span className="label">Total Sales</span>
             <span className="value">{formatEUR(detail.totalSalesProceedsEUR)}</span>
-            <span className={`value secondary ${detail.totalSalesGainEUR >= 0 ? 'positive' : 'negative'}`}>gain: {formatEUR(detail.totalSalesGainEUR)}</span>
+            <span className={`value secondary ${gainClass(detail.totalSalesGainEUR)}`}>gain: {formatEUR(detail.totalSalesGainEUR)}</span>
             {detail.allocatedTaxEUR > 0 && <span className="value secondary">after tax: {formatEUR(detail.totalSalesAfterTaxEUR)}</span>}
           </div>
         )}
@@ -141,19 +141,17 @@ export default function StockDetail() {
                   ) : t.quantity}
                 </td>
               )}
-              <td>
-                {t.priceCurrency === 'USD' ? formatUSD(t.pricePerShare) : formatEUR(t.pricePerShare)}
-              </td>
+              <td>{formatCurrency(t.pricePerShare, t.priceCurrency)}</td>
               {hasSplits && (
                 <td>
                   {t.adjustedQuantity !== t.quantity ? (
-                    <span className="split-adjusted">{formatUSD(t.adjustedPricePerShare)}</span>
-                  ) : (t.priceCurrency === 'USD' ? formatUSD(t.pricePerShare) : formatEUR(t.pricePerShare))}
+                    <span className="split-adjusted">{formatCurrency(t.adjustedPricePerShare, t.priceCurrency)}</span>
+                  ) : formatCurrency(t.pricePerShare, t.priceCurrency)}
                 </td>
               )}
               <td>
                 {t.commission > 0
-                  ? (t.commissionCurrency === 'USD' ? formatUSD(t.commission) : formatEUR(t.commission))
+                  ? formatCurrency(t.commission, t.commissionCurrency)
                   : '—'}
               </td>
               <td>
@@ -168,7 +166,7 @@ export default function StockDetail() {
               <td>{formatEUR(calcTotalCostEUR(t))}</td>
               <td>
                 {t.realizedGainLossEUR != null ? (
-                  <span className={t.realizedGainLossEUR >= 0 ? 'positive' : 'negative'}>
+                  <span className={gainClass(t.realizedGainLossEUR)}>
                     {formatEUR(t.realizedGainLossEUR)}
                   </span>
                 ) : '—'}

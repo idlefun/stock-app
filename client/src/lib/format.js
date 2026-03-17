@@ -8,6 +8,16 @@ export function formatEUR(value) {
   return new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR' }).format(value);
 }
 
+export function formatCurrency(value, currency) {
+  if (currency === 'EUR') return formatEUR(value);
+  return formatUSD(value);
+}
+
+export function gainClass(value) {
+  if (value == null) return '';
+  return value >= 0 ? 'positive' : 'negative';
+}
+
 export function formatPct(value) {
   if (value == null) return '—';
   const sign = value >= 0 ? '+' : '';

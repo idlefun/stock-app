@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
-import { formatEUR, formatDate } from '../lib/format';
+import { formatEUR, formatDate, gainClass } from '../lib/format';
 
 const currentYear = new Date().getFullYear();
 
@@ -48,24 +48,24 @@ function SalesTable({ sales, label, expectedTax, taxPaid }) {
             <td>{s.quantity}</td>
             <td>{formatEUR(s.proceedsEUR)}</td>
             <td>{formatEUR(s.costBasisEUR)}</td>
-            <td className={s.gainEUR >= 0 ? 'positive' : 'negative'}>{formatEUR(s.gainEUR)}</td>
+            <td className={gainClass(s.gainEUR)}>{formatEUR(s.gainEUR)}</td>
             <td>{s.allocatedExpected > 0 ? formatEUR(s.allocatedExpected) : '—'}</td>
             <td>{s.allocatedPaid > 0 ? formatEUR(s.allocatedPaid) : '—'}</td>
             <td>{formatEUR(s.netProceeds)}</td>
-            <td className={s.profitAfterTax >= 0 ? 'positive' : 'negative'}>{formatEUR(s.profitAfterTax)}</td>
+            <td className={gainClass(s.profitAfterTax)}>{formatEUR(s.profitAfterTax)}</td>
           </tr>
         ))}
         <tr className="totals-row">
           <td colSpan="3"><strong>Total</strong></td>
           <td><strong>{formatEUR(totalProceeds)}</strong></td>
           <td><strong>{formatEUR(totalCostBasis)}</strong></td>
-          <td className={totalGain >= 0 ? 'positive' : 'negative'}>
+          <td className={gainClass(totalGain)}>
             <strong>{formatEUR(totalGain)}</strong>
           </td>
           <td><strong>{totalAllocatedExpected > 0 ? formatEUR(totalAllocatedExpected) : '—'}</strong></td>
           <td><strong>{totalAllocatedPaid > 0 ? formatEUR(totalAllocatedPaid) : '—'}</strong></td>
           <td><strong>{formatEUR(totalNetProceeds)}</strong></td>
-          <td className={totalProfitAfterTax >= 0 ? 'positive' : 'negative'}><strong>{formatEUR(totalProfitAfterTax)}</strong></td>
+          <td className={gainClass(totalProfitAfterTax)}><strong>{formatEUR(totalProfitAfterTax)}</strong></td>
         </tr>
       </tbody>
     </table>
@@ -127,14 +127,14 @@ export default function Tax() {
         <>
           <div className="portfolio-summary" style={{ marginBottom: '24px' }}>
             {/* Stock CGT */}
-            <div className={`summary-card ${(data.totals.stockGainEUR || 0) >= 0 ? 'positive' : 'negative'}`}>
+            <div className={`summary-card ${gainClass(data.totals.stockGainEUR)}`}>
               <span className="label">Stock Capital Gains</span>
               <span className="value">{formatEUR(data.totals.stockGainEUR)}</span>
               <span className="secondary">Taxable: {formatEUR(data.expected.stockTaxableGain)}</span>
               <span className="secondary">(after {formatEUR(data.expected.cgtExemption)} exemption)</span>
             </div>
             {/* ETF Capital Gains */}
-            <div className={`summary-card ${(data.totals.etfGainEUR || 0) >= 0 ? 'positive' : 'negative'}`}>
+            <div className={`summary-card ${gainClass(data.totals.etfGainEUR)}`}>
               <span className="label">ETF Capital Gains</span>
               <span className="value">{formatEUR(data.totals.etfGainEUR)}</span>
               <span className="secondary">No exemption</span>
