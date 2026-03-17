@@ -13,14 +13,16 @@ function SalesTable({ sales, label, expectedTax, taxPaid }) {
       ? (s.gainEUR / totalGains) * expectedTax : 0;
     const allocatedPaid = s.gainEUR > 0 && totalGains > 0
       ? (s.gainEUR / totalGains) * taxPaid : 0;
-    return { ...s, allocatedExpected, allocatedPaid, netAfterTax: s.gainEUR - allocatedPaid };
+    const netProceeds = s.proceedsEUR - allocatedPaid;
+    return { ...s, allocatedExpected, allocatedPaid, profitAfterTax: s.gainEUR - allocatedPaid, netProceeds };
   });
   const totalAllocatedExpected = salesWithTax.reduce((sum, s) => sum + s.allocatedExpected, 0);
   const totalAllocatedPaid = salesWithTax.reduce((sum, s) => sum + s.allocatedPaid, 0);
-  const totalNet = salesWithTax.reduce((sum, s) => sum + s.netAfterTax, 0);
+  const totalProfitAfterTax = salesWithTax.reduce((sum, s) => sum + s.profitAfterTax, 0);
   const totalProceeds = sales.reduce((s, t) => s + t.proceedsEUR, 0);
   const totalCostBasis = sales.reduce((s, t) => s + t.costBasisEUR, 0);
   const totalGain = sales.reduce((s, t) => s + t.gainEUR, 0);
+  const totalNetProceeds = salesWithTax.reduce((sum, s) => sum + s.netProceeds, 0);
 
   return (
     <table>
@@ -34,7 +36,8 @@ function SalesTable({ sales, label, expectedTax, taxPaid }) {
           <th>Gain/Loss</th>
           <th>Expected Tax</th>
           <th>Tax Paid</th>
-          <th>Net After Tax</th>
+          <th>Net Proceeds</th>
+          <th>Profit After Tax</th>
         </tr>
       </thead>
       <tbody>
@@ -48,7 +51,8 @@ function SalesTable({ sales, label, expectedTax, taxPaid }) {
             <td className={s.gainEUR >= 0 ? 'positive' : 'negative'}>{formatEUR(s.gainEUR)}</td>
             <td>{s.allocatedExpected > 0 ? formatEUR(s.allocatedExpected) : '—'}</td>
             <td>{s.allocatedPaid > 0 ? formatEUR(s.allocatedPaid) : '—'}</td>
-            <td className={s.netAfterTax >= 0 ? 'positive' : 'negative'}>{formatEUR(s.netAfterTax)}</td>
+            <td>{formatEUR(s.netProceeds)}</td>
+            <td className={s.profitAfterTax >= 0 ? 'positive' : 'negative'}>{formatEUR(s.profitAfterTax)}</td>
           </tr>
         ))}
         <tr className="totals-row">
@@ -60,7 +64,8 @@ function SalesTable({ sales, label, expectedTax, taxPaid }) {
           </td>
           <td><strong>{totalAllocatedExpected > 0 ? formatEUR(totalAllocatedExpected) : '—'}</strong></td>
           <td><strong>{totalAllocatedPaid > 0 ? formatEUR(totalAllocatedPaid) : '—'}</strong></td>
-          <td className={totalNet >= 0 ? 'positive' : 'negative'}><strong>{formatEUR(totalNet)}</strong></td>
+          <td><strong>{formatEUR(totalNetProceeds)}</strong></td>
+          <td className={totalProfitAfterTax >= 0 ? 'positive' : 'negative'}><strong>{formatEUR(totalProfitAfterTax)}</strong></td>
         </tr>
       </tbody>
     </table>
