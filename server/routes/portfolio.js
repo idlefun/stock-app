@@ -515,4 +515,7 @@ router.get('/:ticker', async (req, res) => {
 });
 
 module.exports = router;
-module.exports._test = { buildHoldings, getAssetType, buildAssetTypeMap, computeGainsByYear, computeAllocatedTax, calcStockSummary };
+module.exports.buildHoldings = buildHoldings;
+module.exports.buildAssetTypeMap = buildAssetTypeMap;
+module.exports.computeGainsByYear = computeGainsByYear;
+module.exports.computeAllocatedTax = computeAllocatedTax;

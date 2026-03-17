@@ -9,6 +9,7 @@ const { createCache } = require('../lib/cache');
 const { getManualPrices } = require('./manualPrices');
 const { toEUR } = require('../lib/currency');
 const { loadTaxPaid } = require('../lib/taxPaid');
+const { buildHoldings, buildAssetTypeMap, computeGainsByYear, computeAllocatedTax } = require('./portfolio');
 
 const router = express.Router();
 const histPriceCache = createCache('hist-prices.json', 24 * 60 * 60 * 1000);
@@ -103,9 +104,9 @@ async function computeFundHistory(txns, startCash, startYear, splitsMap, fallbac
       txnIdx++;
     }
 
-    // Deduct CGT paid for this year
-    const cgtPaid = taxPaidData[String(year)] || 0;
-    if (cgtPaid > 0) cash -= cgtPaid;
+    // Deduct CGT allocated to tickers in this fund for this year
+    const allocatedForYear = opts.allocatedTaxByYear?.[String(year)] || 0;
+    if (allocatedForYear > 0) cash -= allocatedForYear;
 
     const manualPrices = opts.manualPrices || {};
     const stockValues = {};
@@ -188,7 +189,34 @@ router.get('/', async (req, res) => {
     const noCashOnBuy = req.query.noCashOnBuy === 'true';
     const manualPrices = await getManualPrices();
     const taxPaidData = loadTaxPaid();
-    const snapshots = await computeFundHistory(filtered, startCash, startYear, splitsMap, fallbackRate, { noCashOnBuy, manualPrices, taxPaidData });
+
+    // Compute per-ticker CGT allocation using ALL transactions, then sum for fund tickers
+    const allHoldings = buildHoldings(allTxns);
+    const allSplitsMap = {};
+    for (const tk of Object.keys(allHoldings)) {
+      try { allSplitsMap[tk] = await getSplits(tk); } catch { allSplitsMap[tk] = []; }
+    }
+    const gainsByYear = computeGainsByYear(allHoldings, allSplitsMap, fallbackRate);
+    const assetTypes = buildAssetTypeMap(allHoldings);
+    const allocatedTaxByTicker = computeAllocatedTax(gainsByYear, assetTypes, taxPaidData);
+
+    // Build per-year allocated tax for just this fund's tickers
+    // We need per-year breakdown, so recompute from gainsByYear
+    const fundTickers = new Set(tickers);
+    const allocatedTaxByYear = {};
+    for (const [yr, tickerGains] of Object.entries(gainsByYear)) {
+      const actualPaid = taxPaidData[yr] || 0;
+      if (actualPaid <= 0) continue;
+      // Reuse the same allocation logic per year
+      const yearAllocated = computeAllocatedTax({ [yr]: tickerGains }, assetTypes, taxPaidData);
+      let fundShare = 0;
+      for (const [tk, amt] of Object.entries(yearAllocated)) {
+        if (fundTickers.has(tk)) fundShare += amt;
+      }
+      if (fundShare > 0) allocatedTaxByYear[yr] = fundShare;
+    }
+
+    const snapshots = await computeFundHistory(filtered, startCash, startYear, splitsMap, fallbackRate, { noCashOnBuy, manualPrices, allocatedTaxByYear });
 
     res.json({ startCash, startYear, exclude, only, snapshots });
   } catch (err) {

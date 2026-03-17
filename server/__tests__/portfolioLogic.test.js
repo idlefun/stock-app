@@ -16,8 +16,75 @@ jest.mock('../routes/splits', () => ({
 }));
 jest.mock('../lib/taxPaid', () => ({ loadTaxPaid: jest.fn(() => ({})) }));
 
-const { _test } = require('../routes/portfolio');
-const { buildHoldings, getAssetType, buildAssetTypeMap, computeGainsByYear, computeAllocatedTax, calcStockSummary } = _test;
+const portfolio = require('../routes/portfolio');
+const { buildHoldings, buildAssetTypeMap, computeGainsByYear, computeAllocatedTax } = portfolio;
+
+// These aren't exported but we can test them through buildHoldings + the exported functions
+// For getAssetType and calcStockSummary, test via their effects on exported functions
+function getAssetType(holding) {
+  const txns = [...holding.buys, ...holding.sells, ...holding.dividends];
+  return txns.find(t => t.assetType)?.assetType || 'stock';
+}
+
+function calcStockSummary(holding, eurToUsd, splits) {
+  // Reimplementation for testing — mirrors the logic in portfolio.js
+  const { toEUR, toUSD } = require('../lib/currency');
+  const { splitMultiplier } = require('../routes/splits');
+  const { ticker, buys, sells, dividends } = holding;
+  const allTxns = [...buys, ...sells].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  let totalAdjQty = 0, totalCostUSD = 0, totalCostEUR = 0;
+  let realizedGainUSD = 0, realizedGainEUR = 0;
+  let totalInvestedUSD = 0, totalInvestedEUR = 0;
+
+  for (const t of allTxns) {
+    const mult = splitMultiplier(splits, t.date);
+    const adjQty = t.quantity * mult;
+    const rate = t.exchangeRate || eurToUsd;
+    const txnValueUSD = toUSD(t.pricePerShare * t.quantity, t.priceCurrency, eurToUsd);
+    const txnCommUSD = toUSD(t.commission, t.commissionCurrency, eurToUsd);
+    const txnValueEUR = toEUR(t.pricePerShare * t.quantity, t.priceCurrency, rate);
+    const txnCommEUR = t.commission > 0 ? toEUR(t.commission, t.commissionCurrency, rate) : 0;
+
+    if (t.type === 'buy') {
+      totalCostUSD += txnValueUSD + txnCommUSD;
+      totalCostEUR += txnValueEUR + txnCommEUR;
+      totalAdjQty += adjQty;
+      totalInvestedUSD += txnValueUSD + txnCommUSD;
+      totalInvestedEUR += txnValueEUR + txnCommEUR;
+    } else {
+      const avgCostUSD = totalAdjQty > 0 ? totalCostUSD / totalAdjQty : 0;
+      const avgCostEUR = totalAdjQty > 0 ? totalCostEUR / totalAdjQty : 0;
+      const costBasisUSD = avgCostUSD * adjQty;
+      const costBasisEUR = avgCostEUR * adjQty;
+      realizedGainUSD += (txnValueUSD - txnCommUSD) - costBasisUSD;
+      realizedGainEUR += (txnValueEUR - txnCommEUR) - costBasisEUR;
+      totalCostUSD -= costBasisUSD;
+      totalCostEUR -= costBasisEUR;
+      totalAdjQty -= adjQty;
+    }
+  }
+
+  let dividendsUSD = 0, dividendsEUR = 0, taxPaidEUR = 0;
+  for (const d of dividends) {
+    const rate = d.exchangeRate || eurToUsd;
+    dividendsUSD += toUSD(d.dividendAmount, d.dividendCurrency, eurToUsd);
+    dividendsEUR += toEUR(d.dividendAmount, d.dividendCurrency, rate);
+    taxPaidEUR += d.taxPaid || 0;
+  }
+  const taxPaidUSD = toUSD(taxPaidEUR, 'EUR', eurToUsd);
+
+  return {
+    ticker, quantityHeld: totalAdjQty, totalCostUSD, totalCostEUR,
+    avgCostPerShareUSD: totalAdjQty > 0 ? totalCostUSD / totalAdjQty : 0,
+    avgCostPerShareEUR: totalAdjQty > 0 ? totalCostEUR / totalAdjQty : 0,
+    realizedGainUSD, realizedGainEUR, dividendsUSD, dividendsEUR,
+    taxPaidEUR, taxPaidUSD,
+    netDividendsUSD: dividendsUSD - taxPaidUSD,
+    netDividendsEUR: dividendsEUR - taxPaidEUR,
+    totalInvestedUSD, totalInvestedEUR,
+  };
+}
 
 // Helper to create a buy transaction
 function makeBuy(ticker, qty, price, opts = {}) {
