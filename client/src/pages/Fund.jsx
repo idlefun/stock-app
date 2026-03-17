@@ -192,7 +192,18 @@ export default function Fund() {
   return (
     <div className="fund-page">
       <h2>Main Fund</h2>
-      <p className="secondary" style={{ marginBottom: '16px' }}>Starting cash: {formatEUR(200000)} (2012) — excludes GWRE</p>
+      <p className="secondary" style={{ marginBottom: '16px' }}>Starting cash: {formatEUR(200000)} (2012) — excludes GWRE
+        {mainFund && mainFund.snapshots.length > 1 && (() => {
+          const snaps = mainFund.snapshots;
+          const endValue = snaps[snaps.length - 1].totalEUR;
+          const years = snaps[snaps.length - 1].year - snaps[0].year;
+          if (years > 0 && endValue > 0) {
+            const cagr = (Math.pow(endValue / 200000, 1 / years) - 1) * 100;
+            return ` — CAGR: ${cagr >= 0 ? '+' : ''}${cagr.toFixed(1)}%`;
+          }
+          return null;
+        })()}
+      </p>
       <FundChart data={mainFund} startCash={200000} />
       <FundTable data={mainFund} startCash={200000} onPriceChange={load} />
 
