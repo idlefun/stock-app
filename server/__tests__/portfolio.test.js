@@ -3,12 +3,43 @@
 
 const fs = require('fs/promises');
 const path = require('path');
+const os = require('os');
+
+const TEST_DATA_DIR = path.join(os.tmpdir(), 'stock-test-data');
+
+// Override DATA_DIR in storage module to use temp directory
+jest.mock('../lib/storage', () => {
+  const original = jest.requireActual('../lib/storage');
+  const overriddenDir = require('path').join(require('os').tmpdir(), 'stock-test-data');
+  return {
+    ...original,
+    DATA_DIR: overriddenDir,
+    ensureDataDir: () => require('fs/promises').mkdir(overriddenDir, { recursive: true }),
+    readOrDefault: async (filename, defaultValue) => {
+      const filePath = require('path').join(overriddenDir, filename);
+      try {
+        const data = await require('fs/promises').readFile(filePath, 'utf-8');
+        return JSON.parse(data);
+      } catch (err) {
+        if (err.code === 'ENOENT') {
+          await require('fs/promises').mkdir(overriddenDir, { recursive: true });
+          await require('fs/promises').writeFile(filePath, JSON.stringify(defaultValue, null, 2), 'utf-8');
+          return defaultValue;
+        }
+        throw err;
+      }
+    },
+    writeJSON: async (filename, data) => {
+      await require('fs/promises').mkdir(overriddenDir, { recursive: true });
+      const filePath = require('path').join(overriddenDir, filename);
+      await require('fs/promises').writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
+    },
+  };
+});
+
 const { readOrDefault, writeJSON, DATA_DIR } = require('../lib/storage');
 
-const TEST_DATA_DIR = path.join(__dirname, '..', '..', 'data');
-
 beforeEach(async () => {
-  // Clean test data
   try {
     await fs.rm(TEST_DATA_DIR, { recursive: true });
   } catch {}
