@@ -1,6 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const { ensureDataDir } = require('../lib/storage');
 
 const router = express.Router();
 const dataDir = path.join(__dirname, '..', '..', 'data');
@@ -26,7 +27,7 @@ router.get('/', (req, res) => {
 });
 
 // POST /api/backup/restore — restore from backup JSON
-router.post('/restore', (req, res) => {
+router.post('/restore', async (req, res) => {
   const data = req.body;
   if (!data || typeof data !== 'object') {
     return res.status(400).json({ error: 'Invalid backup data' });
@@ -34,6 +35,12 @@ router.post('/restore', (req, res) => {
 
   const restored = [];
   const errors = [];
+
+  try {
+    await ensureDataDir();
+  } catch (err) {
+    return res.status(500).json({ error: `Cannot create data directory: ${err.message}` });
+  }
 
   for (const file of BACKUP_FILES) {
     if (data[file] != null) {
