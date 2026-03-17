@@ -44,7 +44,7 @@ async function migrateAssetType(txns) {
 
   // Look up each ticker via Yahoo Finance
   const YahooFinance = require('yahoo-finance2').default;
-  const yahooFinance = new YahooFinance();
+  const yahooFinance = new YahooFinance({ validation: { logErrors: false } });
   const typeMap = {};
 
   for (const ticker of tickersMissing) {

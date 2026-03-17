@@ -1,6 +1,6 @@
 const express = require('express');
 const YahooFinance = require('yahoo-finance2').default;
-const yahooFinance = new YahooFinance();
+const yahooFinance = new YahooFinance({ validation: { logErrors: false } });
 const { getTransactions } = require('./transactions');
 const { fetchRate, loadCache: loadRateCache } = require('./exchangeRate');
 const { getSplits, splitMultiplier, loadCache: loadSplitsCache } = require('./splits');
