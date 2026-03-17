@@ -133,7 +133,8 @@ function FundTable({ data, startCash, onPriceChange }) {
         </tr>
       </thead>
       <tbody>
-        {data.snapshots.map((s, i) => {
+        {[...data.snapshots].reverse().map((s) => {
+          const i = data.snapshots.indexOf(s);
           const prev = i > 0 ? data.snapshots[i - 1].totalEUR : startCash;
           const change = s.totalEUR - prev;
           const changePct = prev !== 0 ? (change / prev) * 100 : 0;
