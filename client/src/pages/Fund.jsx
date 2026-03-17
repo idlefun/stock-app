@@ -199,7 +199,7 @@ export default function Fund() {
           const years = snaps[snaps.length - 1].year - snaps[0].year;
           if (years > 0 && endValue > 0) {
             const cagr = (Math.pow(endValue / 200000, 1 / years) - 1) * 100;
-            return ` — CAGR: ${cagr >= 0 ? '+' : ''}${cagr.toFixed(1)}%`;
+            return ` — CAGR: ${cagr >= 0 ? '+' : ''}${cagr.toFixed(1)}% (Compound Annual Growth Rate)`;
           }
           return null;
         })()}
