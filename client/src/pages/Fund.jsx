@@ -3,19 +3,20 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } f
 import { api } from '../lib/api';
 import { formatEUR } from '../lib/format';
 
-function FundChart({ data }) {
+function FundChart({ data, startCash }) {
   if (!data || data.snapshots.length === 0) return null;
 
+  const initial = startCash ?? 0;
   const chartData = data.snapshots.map(s => ({
     year: s.year,
-    Cash: s.cash,
-    Shares: s.stocksTotalEUR,
+    Change: s.totalEUR - initial,
   }));
 
   const formatAxis = (v) => {
-    if (Math.abs(v) >= 1000000) return `€${(v / 1000000).toFixed(1)}M`;
-    if (Math.abs(v) >= 1000) return `€${(v / 1000).toFixed(0)}k`;
-    return `€${v}`;
+    const sign = v >= 0 ? '+' : '';
+    if (Math.abs(v) >= 1000000) return `${sign}€${(v / 1000000).toFixed(1)}M`;
+    if (Math.abs(v) >= 1000) return `${sign}€${(v / 1000).toFixed(0)}k`;
+    return `${sign}€${v}`;
   };
 
   return (
@@ -23,11 +24,10 @@ function FundChart({ data }) {
       <ResponsiveContainer width="100%" height={350}>
         <AreaChart data={chartData}>
           <XAxis dataKey="year" />
-          <YAxis tickFormatter={formatAxis} width={70} />
+          <YAxis tickFormatter={formatAxis} width={80} />
           <Tooltip formatter={(v) => formatEUR(v)} />
           <Legend />
-          <Area type="monotone" dataKey="Cash" stackId="1" fill="#94a3b8" stroke="#64748b" fillOpacity={0.8} />
-          <Area type="monotone" dataKey="Shares" stackId="1" fill="#6366f1" stroke="#4f46e5" fillOpacity={0.8} />
+          <Area type="monotone" dataKey="Change" fill="#6366f1" stroke="#4f46e5" fillOpacity={0.6} />
         </AreaChart>
       </ResponsiveContainer>
     </div>
@@ -193,12 +193,12 @@ export default function Fund() {
     <div className="fund-page">
       <h2>Main Fund</h2>
       <p className="secondary" style={{ marginBottom: '16px' }}>Starting cash: {formatEUR(200000)} (2012) — excludes GWRE</p>
-      <FundChart data={mainFund} />
+      <FundChart data={mainFund} startCash={200000} />
       <FundTable data={mainFund} startCash={200000} onPriceChange={load} />
 
       <h2 style={{ marginTop: '40px' }}>GWRE Fund</h2>
       <p className="secondary" style={{ marginBottom: '16px' }}>Shares received as salary — cash from sales and dividends only</p>
-      <FundChart data={gwreFund} />
+      <FundChart data={gwreFund} startCash={0} />
       <FundTable data={gwreFund} startCash={0} onPriceChange={load} />
     </div>
   );
