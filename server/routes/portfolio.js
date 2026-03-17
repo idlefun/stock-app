@@ -446,12 +446,10 @@ router.get('/:ticker', async (req, res) => {
     const holding = buildHoldings(tickerTxns)[ticker];
     const summary = calcStockSummary(holding, eurToUsd, splits);
 
-    // Build per-transaction detail with split info and realized gains
-    // Track costs in EUR using each transaction's own exchange rate
+    // Build per-transaction detail with split info and realized gains (FIFO cost basis)
     const detail = [];
-    let runningAdjQty = 0;
-    let runningCostUSD = 0;
-    let runningCostEUR = 0;
+    const buyLotsUSD = []; // FIFO queue: { adjQty, costPerShareUSD }
+    const buyLotsEUR = []; // FIFO queue: { adjQty, costPerShareEUR }
     let totalRealizedEUR = 0;
     let totalDividendsEUR = 0;
     let totalDividendsGrossEUR = 0;
@@ -484,23 +482,40 @@ router.get('/:ticker', async (req, res) => {
       const txnCommEUR = t.commission > 0 ? toEUR(t.commission, t.commissionCurrency, txnRate) : 0;
 
       if (t.type === 'buy') {
-        runningCostUSD += txnCostUSD + txnCommUSD;
-        runningCostEUR += txnCostEUR + txnCommEUR;
-        runningAdjQty += adjQty;
-        totalPurchasesEUR += txnCostEUR + txnCommEUR;
+        const totalCostUSD = txnCostUSD + txnCommUSD;
+        const totalCostEUR = txnCostEUR + txnCommEUR;
+        buyLotsUSD.push({ adjQty, costPerShare: totalCostUSD / adjQty });
+        buyLotsEUR.push({ adjQty, costPerShare: totalCostEUR / adjQty });
+        totalPurchasesEUR += totalCostEUR;
         detail.push({ ...t, splitMultiplier: mult, adjustedQuantity: adjQty, adjustedPricePerShare: adjPricePerShare, realizedGainLossUSD: null, realizedGainLossEUR: null });
       } else {
-        const avgCostUSD = runningAdjQty > 0 ? runningCostUSD / runningAdjQty : 0;
-        const avgCostEUR = runningAdjQty > 0 ? runningCostEUR / runningAdjQty : 0;
-        const costBasisUSD = avgCostUSD * adjQty;
-        const costBasisEUR = avgCostEUR * adjQty;
+        // FIFO: consume earliest buy lots
+        let remainingUSD = adjQty;
+        let costBasisUSD = 0;
+        while (remainingUSD > 0 && buyLotsUSD.length > 0) {
+          const lot = buyLotsUSD[0];
+          const used = Math.min(remainingUSD, lot.adjQty);
+          costBasisUSD += used * lot.costPerShare;
+          lot.adjQty -= used;
+          remainingUSD -= used;
+          if (lot.adjQty <= 0) buyLotsUSD.shift();
+        }
+
+        let remainingEUR = adjQty;
+        let costBasisEUR = 0;
+        while (remainingEUR > 0 && buyLotsEUR.length > 0) {
+          const lot = buyLotsEUR[0];
+          const used = Math.min(remainingEUR, lot.adjQty);
+          costBasisEUR += used * lot.costPerShare;
+          lot.adjQty -= used;
+          remainingEUR -= used;
+          if (lot.adjQty <= 0) buyLotsEUR.shift();
+        }
+
         const proceedsUSD = txnCostUSD - txnCommUSD;
         const proceedsEUR = txnCostEUR - txnCommEUR;
         const realizedUSD = proceedsUSD - costBasisUSD;
         const realizedEUR = proceedsEUR - costBasisEUR;
-        runningCostUSD -= costBasisUSD;
-        runningCostEUR -= costBasisEUR;
-        runningAdjQty -= adjQty;
         totalRealizedEUR += realizedEUR;
         totalSalesProceedsEUR += proceedsEUR;
         totalSalesGainEUR += realizedEUR;
@@ -526,14 +541,18 @@ router.get('/:ticker', async (req, res) => {
       priceStale = true;
     }
 
+    // Remaining cost from FIFO lots
+    const remainingCostUSD = buyLotsUSD.reduce((s, lot) => s + lot.adjQty * lot.costPerShare, 0);
+    const remainingCostEUR = buyLotsEUR.reduce((s, lot) => s + lot.adjQty * lot.costPerShare, 0);
+
     const currentValueUSD = currentPrice && summary.quantityHeld > 0
       ? convertToUSD(currentPrice, priceCurrency, eurToUsd) * summary.quantityHeld
       : null;
     const currentValueEUR = currentPrice && summary.quantityHeld > 0
       ? convertToEUR(currentPrice, priceCurrency, eurToUsd) * summary.quantityHeld
       : null;
-    const unrealizedUSD = currentValueUSD !== null ? currentValueUSD - summary.totalCostUSD : null;
-    const unrealizedEURVal = currentValueEUR !== null ? currentValueEUR - summary.totalCostEUR : null;
+    const unrealizedUSD = currentValueUSD !== null ? currentValueUSD - remainingCostUSD : null;
+    const unrealizedEURVal = currentValueEUR !== null ? currentValueEUR - remainingCostEUR : null;
 
     // Allocate actual tax paid to this stock using FIFO gains, separating stocks from ETFs
     const taxPaidData = loadTaxPaid();
