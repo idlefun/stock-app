@@ -13,10 +13,14 @@ router.get('/', async (req, res) => {
     }
 
     const q = query.trim();
-    const searches = [yahooFinance.search(q)];
+    // validateResult:false — Yahoo's search response no longer matches
+    // yahoo-finance2's schema, which otherwise throws before returning data.
+    const searches = [yahooFinance.search(q, {}, { validateResult: false })];
     // Also search with .DE suffix for European stocks
     if (!q.includes('.')) {
-      searches.push(yahooFinance.search(q + '.DE').catch(() => ({ quotes: [] })));
+      searches.push(
+        yahooFinance.search(q + '.DE', {}, { validateResult: false }).catch(() => ({ quotes: [] }))
+      );
     }
     const allResults = await Promise.all(searches);
     const seen = new Set();
